@@ -1,0 +1,315 @@
+#include "DataStructures.inc"
+
+ViewSetup gViewSetup;
+
+bool gEnableCutPlane;
+Plane gCutPlane;
+
+bool gEnableInterpolation;
+
+sampler2D gNoiseMap;
+float gJitterStrength = 1.0f;
+float2 gNoiseMapSize;
+
+ImageData3D gPrimaryImageData3D;
+ImageData3D gSecondaryImageData3D;
+
+float3 gSliceNormalTexCoords;
+
+//int3 gImageDataResolution3D = {0, 0, 0};
+float2 gMappedIntervalBands;
+
+Light gLight;
+float3 gEyePosition;
+float3 gViewDirection;
+
+
+TransferFunction1D gTransferFunction1D;
+TransferFunction1D gIntegralTransferFunction1D;
+//sampler1D gTransferFunction1Dtex;
+//float2 gTransferFunction1DInterval;
+
+IDMappingBuffer gIDMappingBuffer;
+
+
+float gRenderingSliceThickness;
+float2 gWLWindow;
+sampler1D gColorMap;
+float gMaskAlpha;
+
+
+BoundingBox gBBox;
+int gMinID;
+
+
+
+
+const int edgeOrder[96/*8*12*/];/* = { 
+				10, 11,  9,  4,  8,  5,  1,  0,  6,  2,  3,  7,
+				11,  8, 10,  5,  9,  6,  2,  1,  7,  3,  0,  4,
+				8,  9, 11,  6, 10,  7,  3,  2,  4,  0,  1,  5,
+				9, 10,  8,  7, 11,  4,  0,  3,  5,  1,  2,  6,
+				1,  0,  2,  4,  3,  7, 10, 11,  6,  9,  8,  5,
+				2,  1,  3,  5,  0,  4, 11,  8,  7, 10,  9,  6,
+				3,  2,  0,  6,  1,  5,  8,  9,  4, 11, 10,  7,
+				0,  3,  1,  7,  2,  6,  9, 10,  5,  8, 11,  4 
+				};*/
+
+
+//INCLUDE SHADERS
+#include "Tools.inc"
+#include "Profiles.inc"
+#include "ImageShaderPrograms.cgfx"
+
+
+
+
+//*********************************************************************************************************
+//*******************************************                  ********************************************
+//*******************************************    TECHNIQUES    ********************************************
+//*******************************************                  ********************************************
+//*********************************************************************************************************
+
+//*********************** TRANSFER FUNCTIONS ****************
+technique TransferFunction1D_3DNoBlending {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_TransferFunction1D_3D( 
+									gPrimaryImageData3D, 
+									gTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands 
+									);
+
+		DepthTestEnable = true;DepthMask = true;CullFaceEnable = false;BlendEnable = false;DepthFunc = LEqual;
+	}
+}
+
+technique TransferFunction1D_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_TransferFunction1D_3D( 
+									gPrimaryImageData3D, 
+									gTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands 
+									);
+		DepthTestEnable = true;DepthMask = true;CullFaceEnable = false;BlendEnable = true;BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );DepthFunc = LEqual;
+	}
+}
+
+
+technique TransferFunction1DShading_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_TransferFunction1DShading_3D( 
+									gPrimaryImageData3D, 
+									gTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands, 
+									gLight, 
+									gEyePosition 
+									);
+		DepthTestEnable = true;DepthMask = true;CullFaceEnable = false;BlendEnable = true;BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );DepthFunc = LEqual;
+	}
+}
+
+technique TransferFunction1DShadingJitter_3D {
+	pass t0 {
+		VertexProgram = compile gp4vp vp_VertexPassPosAsTexCoords();
+		//VertexProgram = compile gp4vp vertexPassThru();
+
+		//GeometryProgram = compile gp4gp gp_GenerateSlice( gViewDirection, gMinID, gBBox );
+		FragmentProgram = compile gp4fp fp_TransferFunction1DShadingJitter_3D( 
+									gPrimaryImageData3D, 
+									gTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands, 
+									gLight,
+									gEyePosition,
+									gViewDirection 
+									);
+		DepthTestEnable = true;	DepthMask = true; CullFaceEnable = false; BlendEnable = true; BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha ); DepthFunc = LEqual;
+	}
+}
+
+
+technique TransferFunction1DJitter_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_TransferFunction1DJitter_3D( 
+									gPrimaryImageData3D, 
+									gTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands, 
+									gViewDirection 
+									);
+		DepthTestEnable = true; DepthMask = true; CullFaceEnable = false; BlendEnable = true; BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha ); DepthFunc = LEqual;
+	}
+}
+//*********************** INTEGRAL TRANSFER FUNCTIONS ****************
+/*technique IntegralTransferFunction1D_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_IntegralTransferFunction1D_3D( 
+									gPrimaryImageData3D, 
+									gTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands 
+									);
+		DepthTestEnable = true;DepthMask = true;CullFaceEnable = false;BlendEnable = true;BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );DepthFunc = LEqual;
+	}
+}*/
+
+
+technique IntegralTransferFunction1DShading_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_IntegralTransferFunction1DShading_3D( 
+									gPrimaryImageData3D, 
+									gIntegralTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands, 
+									gLight, 
+									gEyePosition, 
+									gViewDirection 
+									);
+		DepthTestEnable = true;DepthMask = true;CullFaceEnable = false;BlendEnable = true;BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );DepthFunc = LEqual;
+	}
+}
+
+technique IntegralTransferFunction1DShadingJitter_3D {
+	pass t0 {
+		//VertexProgram = compile gp5vp vertexPassThru();
+		//GeometryProgram = compile gp5gp gp_GenerateSlice( gViewDirection, gMinID, gBBox );
+		VertexProgram = compile gp4vp vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile gp4fp fp_IntegralTransferFunction1DShadingJitter_3D( 
+									gPrimaryImageData3D, 
+									gIntegralTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands, 
+									gLight,
+									gEyePosition,
+									gViewDirection 
+									);
+		DepthTestEnable = true;	DepthMask = true; CullFaceEnable = false; BlendEnable = true; BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha ); DepthFunc = LEqual;
+	}
+}
+
+/*
+technique IntegralTransferFunction1DJitter_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_IntegralTransferFunction1DJitter_3D( 
+									gPrimaryImageData3D, 
+									gTransferFunction1D, 
+									gRenderingSliceThickness, 
+									gMappedIntervalBands, 
+									gViewDirection 
+									);
+		DepthTestEnable = true; DepthMask = true; CullFaceEnable = false; BlendEnable = true; BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha ); DepthFunc = LEqual;
+	}
+}*/
+
+//*********************** WINDOW LUT ****************
+
+
+technique WLWindow_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_WLWindow_3D( 
+							gPrimaryImageData3D, 
+							float3( 
+								gWLWindow.x / (gMappedIntervalBands[1] - gMappedIntervalBands[0]), 
+								gWLWindow.y / (gMappedIntervalBands[1] - gMappedIntervalBands[0]),
+								(gMappedIntervalBands[1] - gMappedIntervalBands[0])/ gWLWindow.x 
+								) 
+							);
+	}
+}
+
+technique WLWindowMIP_3D  {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_WLWindow_3D( 
+								gPrimaryImageData3D, 
+								float3( 
+									gWLWindow.x / (gMappedIntervalBands[1] - gMappedIntervalBands[0]), 
+									gWLWindow.y / (gMappedIntervalBands[1] - gMappedIntervalBands[0]),
+									(gMappedIntervalBands[1] - gMappedIntervalBands[0])/ gWLWindow.x 
+									) 
+								);
+		DepthTestEnable = false;
+		DepthMask = true;
+		CullFaceEnable = false;
+		BlendEnable = true;
+		BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );
+		BlendEquation = Max;
+
+		DepthFunc = LEqual;
+	}
+}
+
+technique WLWindowBasic_3D  {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_WLWindowBasic_3D( 
+								gPrimaryImageData3D, 
+								float3( 
+									gWLWindow.x / (gMappedIntervalBands[1] - gMappedIntervalBands[0]), 
+									gWLWindow.y / (gMappedIntervalBands[1] - gMappedIntervalBands[0]),
+									(gMappedIntervalBands[1] - gMappedIntervalBands[0])/ gWLWindow.x 
+									),
+								gRenderingSliceThickness 
+								);
+		DepthTestEnable = true;
+		DepthMask = true;
+		CullFaceEnable = false;
+		BlendEnable = true;
+		BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );
+		DepthFunc = LEqual;
+	}
+}
+
+
+technique SimpleRegionColorMap_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_SimpleRegionColorMap_3D( 
+							gPrimaryImageData3D, 
+							gMappedIntervalBands[1] - gMappedIntervalBands[0] 
+							);
+	}
+}
+
+technique OverlayMask_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_OverlayMask_3D( 
+							gSecondaryImageData3D, 
+							float4( 0.0f, 0.0f, 1.0f, 0.5f ),
+							float4( 0.0f, 1.0f, 0.0f, 0.5f )
+							);
+		DepthTestEnable = false;
+		CullFaceEnable = false;
+		BlendEnable = true;
+		BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );
+	}
+	
+}
+
+technique OverlayRegions_3D {
+	pass t0 {
+		VertexProgram = compile VERTEX_SHADER_PROFILE vp_VertexPassPosAsTexCoords();
+		FragmentProgram = compile FRAGMENT_SHADER_PROFILE fp_OverlayRegions_3D( 
+							gSecondaryImageData3D, 
+							gIDMappingBuffer
+							);
+		DepthTestEnable = false;
+		CullFaceEnable = false;
+		BlendEnable = true;
+		BlendFunc = int2( SrcAlpha, OneMinusSrcAlpha );
+	}
+	
+}
+
