@@ -70,22 +70,25 @@ setupView()
 
 }
 
-template< typename TImage>
+template< typename TImage, typename TCamera, typename TBoundingBox>
 void
-renderMIP(const TImage &aImage)
+renderMIP(const TImage &aImage, const TCamera &aCamera, const TBoundingBox &aBoundingBox, size_t aMaxSampleCount)
 {
 	
-	mCgEffect.SetParameter( "gPrimaryImageData3D", *primaryData );
-	mCgEffect.SetParameter( "gMappedIntervalBands", primaryData->GetMappedInterval() );
+	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
+	mCgEffect.setParameter("gCamera",             aCamera);
+	mCgEffect.setParameter("gBoundingBox",        aBoundingBox);
 	
-	size_t sliceCount = aConfig.sampleCount;
+	//mCgEffect.SetParameter( "gMappedIntervalBands", primaryData->GetMappedInterval() );
+	
+	/*size_t sliceCount = aConfig.sampleCount;
 	if( sliceCount > mMaxSampleCount ) {
 		reallocateArrays( sliceCount );
-	}
-	M4D::BoundingBox3D bbox( primaryData->getExtents().realMinimum, primaryData->getExtents().realMaximum );
+	}*/
+	/*M4D::BoundingBox3D bbox( primaryData->getExtents().realMinimum, primaryData->getExtents().realMaximum );
 	if ( aConfig.enableVolumeRestrictions ) {
 		applyVolumeRestrictionsOnBoundingBox( bbox, aConfig.volumeRestrictions );
-	}
+	}*/
 	//LOG( bbox );
 	float 				min = 0; 
 	float 				max = 0;
@@ -105,13 +108,13 @@ renderMIP(const TImage &aImage)
 	mCgEffect.setParameter( "gEyePosition", aConfig.camera.GetEyePosition() );
 	mCgEffect.setParameter( "gRenderingSliceThickness", renderingSliceThickness );
 
-	mCgEffect.setParameter( "gViewDirection", aConfig.camera.GetTargetDirection() );
-	mCgEffect.setParameter( "edgeOrder", edgeOrder, 8*12 );
-	mCgEffect.setParameter( "gMinID", (int)minId );
-	mCgEffect.setParameter( "gBBox", bbox );
+	//mCgEffect.setParameter( "gViewDirection", aConfig.camera.GetTargetDirection() );
+	//mCgEffect.setParameter( "edgeOrder", edgeOrder, 8*12 );
+	//mCgEffect.setParameter( "gMinID", (int)minId );
+	//mCgEffect.setParameter( "gBBox", bbox );
 
-	Vector3f tmp = VectorMemberDivision( aConfig.camera.GetTargetDirection(), primaryData->getExtents().realMaximum-primaryData->getExtents().realMinimum );
-	mCgEffect.setParameter( "gSliceNormalTexCoords", tmp );
+	//Vector3f tmp = VectorMemberDivision( aConfig.camera.GetTargetDirection(), primaryData->getExtents().realMaximum-primaryData->getExtents().realMinimum );
+	//mCgEffect.setParameter( "gSliceNormalTexCoords", tmp );
 
 	mCgEffect.setParameter( "gEnableCutPlane", aConfig.enableCutPlane );
 	mCgEffect.setParameter( "gCutPlane", aConfig.cutPlane );
