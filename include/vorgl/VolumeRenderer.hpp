@@ -78,7 +78,17 @@ renderMIP(const TImage &aImage, const TCamera &aCamera, const TBoundingBox &aBou
 	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gCamera",             aCamera);
 	mCgEffect.setParameter("gBoundingBox",        aBoundingBox);
+
+	mCgEffect.setParameter( "gViewSetup", aViewSetup );
+	mCgEffect.setParameter( "gWLWindow", aConfig.lutWindow );
+	techniqueName = "WLWindowMIP_3D";
+
+	//Cut plane ---------------------------------------------------------
+	/*mCgEffect.setParameter( "gEnableCutPlane", aConfig.enableCutPlane );
+	mCgEffect.setParameter( "gCutPlane", aConfig.cutPlane );
+	mCgEffect.setParameter( "gEnableInterpolation", aConfig.enableInterpolation );*/
 	
+
 	//mCgEffect.SetParameter( "gMappedIntervalBands", primaryData->GetMappedInterval() );
 	
 	/*size_t sliceCount = aConfig.sampleCount;
@@ -105,8 +115,8 @@ renderMIP(const TImage &aImage, const TCamera &aCamera, const TBoundingBox &aBou
 			);
 	float renderingSliceThickness = (max-min)/static_cast< float >( sliceCount );
 
-	mCgEffect.setParameter( "gEyePosition", aConfig.camera.GetEyePosition() );
-	mCgEffect.setParameter( "gRenderingSliceThickness", renderingSliceThickness );
+	//mCgEffect.setParameter( "gEyePosition", aConfig.camera.GetEyePosition() );
+	//mCgEffect.setParameter( "gRenderingSliceThickness", renderingSliceThickness );
 
 	//mCgEffect.setParameter( "gViewDirection", aConfig.camera.GetTargetDirection() );
 	//mCgEffect.setParameter( "edgeOrder", edgeOrder, 8*12 );
@@ -116,16 +126,10 @@ renderMIP(const TImage &aImage, const TCamera &aCamera, const TBoundingBox &aBou
 	//Vector3f tmp = VectorMemberDivision( aConfig.camera.GetTargetDirection(), primaryData->getExtents().realMaximum-primaryData->getExtents().realMinimum );
 	//mCgEffect.setParameter( "gSliceNormalTexCoords", tmp );
 
-	mCgEffect.setParameter( "gEnableCutPlane", aConfig.enableCutPlane );
-	mCgEffect.setParameter( "gCutPlane", aConfig.cutPlane );
-	mCgEffect.setParameter( "gEnableInterpolation", aConfig.enableInterpolation );
 
-	//mCgEffect.SetGLStateMatrixParameter( "gModelViewProj", CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY );
-	mCgEffect.setParameter( "gViewSetup", aViewSetup );
-	
 	/*ctMaxIntensityProjection*/
-	mCgEffect.setParameter( "gWLWindow", aConfig.lutWindow );
-	techniqueName = "WLWindowMIP_3D";
+	//mCgEffect.SetGLStateMatrixParameter( "gModelViewProj", CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY );
+
 
 
 	mCgEffect.ExecuteTechniquePass(
