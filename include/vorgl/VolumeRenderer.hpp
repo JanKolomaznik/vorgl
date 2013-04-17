@@ -1,361 +1,111 @@
 #pragma once
 
+#include <soglu/Camera.hpp>
+#include <soglu/BoundingBox.hpp>
+#include <soglu/Primitives.hpp>
+#include <soglu/GLTextureImage.hpp>
+#include <soglu/GLViewSetup.hpp>
+
+#include <vorgl/TransferFunctionBuffer.hpp>
+
+
 namespace vorgl {
+
+enum TFConfigurationFlags{
+	tfShading	= 1,
+	tfJittering	= 1 << 1,
+	tfIntegral	= 1 << 2
+};
 
 
 class VolumeRenderer
 {
 public:
+	//typedef std::map< std::wstring, int > ColorTransformNameToIDMap;
+	//typedef std::map< int, std::wstring > ColorTransformIDToNameMap;
 
+	struct RenderingConfiguration;
 
-protected:
+	void
+	Initialize();
 
+	void
+	Finalize();
 
+	
+	void
+	basicRendering( 
+		const soglu::Camera &aCamera, 
+		const soglu::GLTextureImageTyped<3> &aImage, 
+		const soglu::BoundingBox3D &aBoundingBox, 
+		size_t aSliceCount,
+		bool aJitterEnabled,
+		float aJitterStrength, 
+		bool aEnableCutPlane,
+		soglu::Planef aCutPlane,
+		bool aEnableInterpolation,
+		Vector2f aLutWindow,
+		const soglu::GLViewSetup &aViewSetup,
+		bool aMIP,
+		uint64 aFlags
+     	);
+	
+	void
+	transferFunctionRendering( 
+		const soglu::Camera &aCamera, 
+		const soglu::GLTextureImageTyped<3> &aImage, 
+		const soglu::BoundingBox3D &aBoundingBox, 
+		size_t aSliceCount, 
+		bool aJitterEnabled,
+		float aJitterStrength, 
+		bool aEnableCutPlane,
+		soglu::Planef aCutPlane,
+		bool aEnableInterpolation,
+		const soglu::GLViewSetup &aViewSetup,
+		const vorgl::GLTransferFunctionBuffer1D &aTransferFunction,
+		Vector3f aLightPosition,
+		uint64 aFlags
+	);
+	
+	void
+	setupJittering(float aJitterStrength);
+	
+	void
+	setupView(const soglu::Camera &aCamera, const soglu::GLViewSetup &aViewSetup);
+	
+	void
+	setupSamplingProcess(const soglu::BoundingBox3D &aBoundingBox, const soglu::Camera &aCamera, size_t aSliceCount);
+	
+	void
+	setupLights(const Vector3f &aLightPosition);
+	
+	void
+	initJitteringTexture();
 
+	void
+	reallocateArrays( size_t aNewMaxSampleCount )
+	{
+		if( mVertices ) {
+			delete [] mVertices;
+		}
+		if( mIndices ) {
+			delete [] mIndices;
+		}
+
+		mVertices = new glm::fvec3[ (aNewMaxSampleCount+1) * 6 ];
+		mIndices = new unsigned[ (aNewMaxSampleCount+1) * 7 ];
+		mMaxSampleCount = aNewMaxSampleCount;
+	}
+
+	CGcontext   				mCgContext;
+	soglu::CgFXShader			mCgEffect;
+	GLuint					mNoiseMap;
+
+	
+	glm::fvec3 *mVertices;
+	unsigned *mIndices;
+	size_t		mMaxSampleCount;
 };
-void
-renderSingleImage()
-{
-
-}
-
-	
-void
-VolumeRenderer::initJitteringTexture()
-{
-	//TODO make better - destroy
-	int size = 32;
-	uint8 * buf = new uint8[size*size];
-	srand( (unsigned)time(NULL) );
-	for( int i = 0; i < size*size; ++i ) {
-		buf[i] = static_cast<uint8>( 255.0f * rand()/(float)RAND_MAX );
-	}
-	glGenTextures(1, &mNoiseMap );
-	//glActiveTextureARB(GL_TEXTURE3_ARB);
-	glBindTexture( GL_TEXTURE_2D, mNoiseMap );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-	glTexImage2D(
-			GL_TEXTURE_2D,
-			0,
-			GL_LUMINANCE8,
-			size,
-			size,
-			0, 
-			GL_LUMINANCE, 
-			GL_UNSIGNED_BYTE,
-			buf
-		    );
-	glBindTexture( GL_TEXTURE_2D, 0 );
-
-	delete buf;
-}
-
-
-void
-setupView()
-{
-	static int edgeOrder[8*12] = {
-		 10, 11,  9,  4,  8,  5,  1,  0,  6,  2,  3,  7,
-		 11,  8, 10,  5,  9,  6,  2,  1,  7,  3,  0,  4,
-		  8,  9, 11,  6, 10,  7,  3,  2,  4,  0,  1,  5,
-		  9, 10,  8,  7, 11,  4,  0,  3,  5,  1,  2,  6,
-		  1,  0,  2,  4,  3,  7, 10, 11,  6,  9,  8,  5,
-		  2,  1,  3,  5,  0,  4, 11,  8,  7, 10,  9,  6,
-		  3,  2,  0,  6,  1,  5,  8,  9,  4, 11, 10,  7,
-		  0,  3,  1,  7,  2,  6,  9, 10,  5,  8, 11,  4
-	};
-
-}
-
-template< typename TImage, typename TCamera, typename TBoundingBox>
-void
-renderMIP(const TImage &aImage, const TCamera &aCamera, const TBoundingBox &aBoundingBox, size_t aMaxSampleCount)
-{
-	
-	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
-	mCgEffect.setParameter("gCamera",             aCamera);
-	mCgEffect.setParameter("gBoundingBox",        aBoundingBox);
-
-	mCgEffect.setParameter( "gViewSetup", aViewSetup );
-	mCgEffect.setParameter( "gWLWindow", aConfig.lutWindow );
-	techniqueName = "WLWindowMIP_3D";
-
-	//Cut plane ---------------------------------------------------------
-	/*mCgEffect.setParameter( "gEnableCutPlane", aConfig.enableCutPlane );
-	mCgEffect.setParameter( "gCutPlane", aConfig.cutPlane );
-	mCgEffect.setParameter( "gEnableInterpolation", aConfig.enableInterpolation );*/
-	
-
-	//mCgEffect.SetParameter( "gMappedIntervalBands", primaryData->GetMappedInterval() );
-	
-	/*size_t sliceCount = aConfig.sampleCount;
-	if( sliceCount > mMaxSampleCount ) {
-		reallocateArrays( sliceCount );
-	}*/
-	/*M4D::BoundingBox3D bbox( primaryData->getExtents().realMinimum, primaryData->getExtents().realMaximum );
-	if ( aConfig.enableVolumeRestrictions ) {
-		applyVolumeRestrictionsOnBoundingBox( bbox, aConfig.volumeRestrictions );
-	}*/
-	//LOG( bbox );
-	float 				min = 0; 
-	float 				max = 0;
-	unsigned			minId = 0;	
-	unsigned			maxId = 0;
-	GetBBoxMinMaxDistance( 
-			bbox, 
-			aConfig.camera.GetEyePosition(), 
-			aConfig.camera.GetTargetDirection(), 
-			min, 
-			max, 
-		       	minId,	
-		       	maxId	
-			);
-	float renderingSliceThickness = (max-min)/static_cast< float >( sliceCount );
-
-	//mCgEffect.setParameter( "gEyePosition", aConfig.camera.GetEyePosition() );
-	//mCgEffect.setParameter( "gRenderingSliceThickness", renderingSliceThickness );
-
-	//mCgEffect.setParameter( "gViewDirection", aConfig.camera.GetTargetDirection() );
-	//mCgEffect.setParameter( "edgeOrder", edgeOrder, 8*12 );
-	//mCgEffect.setParameter( "gMinID", (int)minId );
-	//mCgEffect.setParameter( "gBBox", bbox );
-
-	//Vector3f tmp = VectorMemberDivision( aConfig.camera.GetTargetDirection(), primaryData->getExtents().realMaximum-primaryData->getExtents().realMinimum );
-	//mCgEffect.setParameter( "gSliceNormalTexCoords", tmp );
-
-
-	/*ctMaxIntensityProjection*/
-	//mCgEffect.SetGLStateMatrixParameter( "gModelViewProj", CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY );
-
-
-
-	mCgEffect.ExecuteTechniquePass(
-			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSlices_Buffered, 
-				bbox,
-				aConfig.camera,
-				sliceCount,
-				mVertices,
-				mIndices,
-				1.0f
-				) 
-			); 
-	/*mCgEffect.ExecuteTechniquePass(
-			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSliceCenterSamples, 
-				bbox,
-				aConfig.camera,
-				sliceCount,
-				1.0f
-				) 
-			);*/
-
-	/*mCgEffect.ExecuteTechniquePass(
-			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSlices, 
-				bbox,
-				aConfig.camera,
-				sliceCount,
-				1.0f
-				) 
-			); */
-
-
-
-	M4D::CheckForGLError( "OGL error : " );
-}
-
-void
-VolumeRenderer::Render( VolumeRenderer::RenderingConfiguration & aConfig, const GLViewSetup &aViewSetup )
-{
-	static int edgeOrder[8*12] = {
-		 10, 11,  9,  4,  8,  5,  1,  0,  6,  2,  3,  7,
-		 11,  8, 10,  5,  9,  6,  2,  1,  7,  3,  0,  4,
-		  8,  9, 11,  6, 10,  7,  3,  2,  4,  0,  1,  5,
-		  9, 10,  8,  7, 11,  4,  0,  3,  5,  1,  2,  6,
-		  1,  0,  2,  4,  3,  7, 10, 11,  6,  9,  8,  5,
-		  2,  1,  3,  5,  0,  4, 11,  8,  7, 10,  9,  6,
-		  3,  2,  0,  6,  1,  5,  8,  9,  4, 11, 10,  7,
-		  0,  3,  1,  7,  2,  6,  9, 10,  5,  8, 11,  4
-	};
-
-	GLTextureImageTyped<3>::Ptr primaryData = aConfig.primaryImageData.lock();
-	if ( !primaryData ) {
-		_THROW_ ErrorHandling::EObjectUnavailable( "Primary texture not available" );
-	}
-	
-	mCgEffect.SetParameter( "gPrimaryImageData3D", *primaryData );
-	mCgEffect.SetParameter( "gMappedIntervalBands", primaryData->GetMappedInterval() );
-	
-	GLTextureImageTyped<3>::Ptr secondaryData = aConfig.secondaryImageData.lock();
-	if( secondaryData ) {
-		mCgEffect.SetParameter( "gSecondaryImageData3D", *secondaryData );
-	}
-	
-	size_t sliceCount = aConfig.sampleCount;
-	if( sliceCount > mMaxSampleCount ) {
-		reallocateArrays( sliceCount );
-	}
-	M4D::BoundingBox3D bbox( primaryData->getExtents().realMinimum, primaryData->getExtents().realMaximum );
-	if ( aConfig.enableVolumeRestrictions ) {
-		applyVolumeRestrictionsOnBoundingBox( bbox, aConfig.volumeRestrictions );
-	}
-	//LOG( bbox );
-	float 				min = 0; 
-	float 				max = 0;
-	unsigned			minId = 0;	
-	unsigned			maxId = 0;
-	GetBBoxMinMaxDistance( 
-			bbox, 
-			aConfig.camera.GetEyePosition(), 
-			aConfig.camera.GetTargetDirection(), 
-			min, 
-			max, 
-		       	minId,	
-		       	maxId	
-			);
-	float renderingSliceThickness = (max-min)/static_cast< float >( sliceCount );
-
-	mCgEffect.SetParameter( "gLight.position", aConfig.lightPosition );
-	mCgEffect.SetParameter( "gLight.color", Vector3f( 1.0f, 1.0f, 1.0f ) );
-	mCgEffect.SetParameter( "gLight.ambient", Vector3f( 0.3f, 0.3f, 0.3f ) );
-	mCgEffect.SetParameter( "gEyePosition", aConfig.camera.GetEyePosition() );
-	mCgEffect.SetParameter( "gRenderingSliceThickness", renderingSliceThickness );
-
-	mCgEffect.SetParameter( "gViewDirection", aConfig.camera.GetTargetDirection() );
-	mCgEffect.SetParameter( "edgeOrder", edgeOrder, 8*12 );
-	mCgEffect.SetParameter( "gMinID", (int)minId );
-	mCgEffect.SetParameter( "gBBox", bbox );
-
-	Vector3f tmp = VectorMemberDivision( aConfig.camera.GetTargetDirection(), primaryData->getExtents().realMaximum-primaryData->getExtents().realMinimum );
-	mCgEffect.SetParameter( "gSliceNormalTexCoords", tmp );
-	mCgEffect.SetTextureParameter( "gNoiseMap", mNoiseMap );
-	mCgEffect.SetParameter( "gNoiseMapSize", Vector2f( 32.0f, 32.0f ) );
-	mCgEffect.SetParameter( "gJitterStrength", aConfig.jitterStrength  );
-
-	mCgEffect.SetParameter( "gEnableCutPlane", aConfig.enableCutPlane );
-	mCgEffect.SetParameter( "gCutPlane", aConfig.cutPlane );
-	mCgEffect.SetParameter( "gEnableInterpolation", aConfig.enableInterpolation );
-
-	//mCgEffect.SetGLStateMatrixParameter( "gModelViewProj", CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY );
-	mCgEffect.SetParameter( "gViewSetup", aViewSetup );
-	
-	std::string techniqueName;
-	GLTransferFunctionBuffer1D::ConstPtr transferFunction;
-	GLTransferFunctionBuffer1D::ConstPtr integralTransferFunction;
-	switch ( aConfig.colorTransform ) {
-	case ctTransferFunction1D:
-		{
-			transferFunction = aConfig.transferFunction.lock();
-			if ( !transferFunction ) {
-				_THROW_ M4D::ErrorHandling::EObjectUnavailable( "Transfer function no available" );
-			}
-
-			mCgEffect.SetParameter( "gTransferFunction1D", *transferFunction );
-
-			integralTransferFunction = aConfig.integralTransferFunction.lock();
-			if( integralTransferFunction ) {
-				mCgEffect.SetParameter( "gIntegralTransferFunction1D", *integralTransferFunction );
-			}
-			unsigned configurationMask = 0;
-
-			if ( aConfig.jitterEnabled ) configurationMask |= tfJittering;
-			if ( aConfig.shadingEnabled ) configurationMask |= tfShading;
-			if ( aConfig.integralTFEnabled ) configurationMask |= tfIntegral;
-
-			switch ( configurationMask ) {
-			case 0:
-			case tfIntegral:
-				techniqueName = "TransferFunction1D_3D";
-				break;
-			case tfJittering:
-			case ( tfJittering | tfIntegral ):
-				techniqueName = "TransferFunction1DJitter_3D";
-				break;
-			case ( tfShading | tfIntegral ):
-				techniqueName = "IntegralTransferFunction1DShading_3D";
-				break;
-			case ( tfJittering | tfShading | tfIntegral ):
-				techniqueName = "IntegralTransferFunction1DShadingJitter_3D";
-				break;
-			case ( tfShading ):
-				techniqueName = "TransferFunction1DShading_3D";
-				break;
-			case ( tfJittering | tfShading ):
-				techniqueName = "TransferFunction1DShadingJitter_3D";
-				break;
-			default:
-				ASSERT( false );
-			}
-			/*if ( aConfig.jitterEnabled ) {
-				if ( aConfig.shadingEnabled ) {
-					techniqueName = "TransferFunction1DShadingJitter_3D";
-				} else {
-					techniqueName = "TransferFunction1DJitter_3D";
-				}
-			} else {
-				if ( aConfig.shadingEnabled ) {
-					techniqueName = "TransferFunction1DShading_3D";
-				} else {
-					techniqueName = "TransferFunction1D_3D";
-				}
-			}*/
-		}
-		break;
-	case ctMaxIntensityProjection:
-		{
-			mCgEffect.SetParameter( "gWLWindow", aConfig.lutWindow );
-			techniqueName = "WLWindowMIP_3D";
-		}
-		break;
-	case ctBasic:
-		{
-			mCgEffect.SetParameter( "gWLWindow", aConfig.lutWindow );
-			techniqueName = "WLWindowBasic_3D";
-		}
-		break;
-	default:
-		ASSERT( false );
-	}
-	//D_PRINT(  aConfig.imageData->GetMinimum() << " ----- " << aConfig.imageData->GetMaximum() << "++++" << sliceCount );
-	mCgEffect.ExecuteTechniquePass(
-			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSlices_Buffered, 
-				bbox,
-				aConfig.camera,
-				sliceCount,
-				mVertices,
-				mIndices,
-				1.0f
-				) 
-			); 
-	/*mCgEffect.ExecuteTechniquePass(
-			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSliceCenterSamples, 
-				bbox,
-				aConfig.camera,
-				sliceCount,
-				1.0f
-				) 
-			);*/
-
-	/*mCgEffect.ExecuteTechniquePass(
-			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSlices, 
-				bbox,
-				aConfig.camera,
-				sliceCount,
-				1.0f
-				) 
-			); */
-
-
-
-	M4D::CheckForGLError( "OGL error : " );
-}
 
 
 } //namespace vorgl
