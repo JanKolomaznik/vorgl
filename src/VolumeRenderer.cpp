@@ -1,21 +1,23 @@
-#include "vorgl/VolumeRenderer.hpp"
+#include <vorgl/VolumeRenderer.hpp>
 
 #include <glm/gtx/component_wise.hpp>
 #include <glm/gtx/verbose_operator.hpp>
+
+#include <vorgl/SliceGeneration.hpp>
 
 namespace vorgl
 {
 
 
 
-void
-applyVolumeRestrictionsOnBoundingBox( M4D::BoundingBox3D &aBBox, const VolumeRestrictions &aVolumeRestrictions )
+/*void
+applyVolumeRestrictionsOnBoundingBox(soglu::BoundingBox3D &aBBox, const VolumeRestrictions &aVolumeRestrictions )
 {
 	glm::fvec3 corner1 = aBBox.getMin();
 	glm::fvec3 corner2 = aBBox.getMax();
 	glm::fvec3 size = corner2 - corner1;
 	
-	Vector3f i1Tmp, i2Tmp;
+	glm::fvec3 i1Tmp, i2Tmp;
 	aVolumeRestrictions.get3D(i1Tmp, i2Tmp);
 
 	glm::fvec3 i1(i1Tmp[0], i1Tmp[1], i1Tmp[2]);
@@ -24,27 +26,20 @@ applyVolumeRestrictionsOnBoundingBox( M4D::BoundingBox3D &aBBox, const VolumeRes
 
 	corner2 = corner1 + (i2 * size);
 	corner1 += (i1 * size);
-	aBBox = M4D::BoundingBox3D( corner1, corner2 );
-}
+	aBBox = soglu::BoundingBox3D(corner1, corner2);
+}*/
 
 void
-VolumeRenderer::Initialize()
+VolumeRenderer::initialize(boost::filesystem::path aPath)
 {
-	initializeCg();
-	mCgEffect.initialize( gVolumeRendererShaderPath/*"ImageRender.cgfx"*/ );
+	soglu::initializeCg();
+	mCgEffect.initialize(aPath/*"ImageRender.cgfx"*/);
 
 	initJitteringTexture();
 
 	mMaxSampleCount = 0;
 	mVertices = NULL;
 	mIndices = NULL;
-
-	mAvailableColorTransforms.clear();
-	//mAvailableColorTransforms.push_back( WideNameIdPair( L"Transfer function", ctTransferFunction1D ) );
-	//mAvailableColorTransforms.push_back( WideNameIdPair( L"MIP", ctMaxIntensityProjection ) );
-	mAvailableColorTransforms.push_back( ColorTransformNameIDList::value_type( "Transfer function", ctTransferFunction1D ) );
-	mAvailableColorTransforms.push_back( ColorTransformNameIDList::value_type( "MIP", ctMaxIntensityProjection ) );
-	mAvailableColorTransforms.push_back( ColorTransformNameIDList::value_type( "Basic", ctBasic ) );
 }
 
 void
@@ -81,14 +76,14 @@ VolumeRenderer::initJitteringTexture()
 }
 
 void
-VolumeRenderer::Finalize()
+VolumeRenderer::finalize()
 {
 	//TODO
 }
 
 
 void
-VolumeRenderer::setupView(const Camera &aCamera, const GLViewSetup &aViewSetup)
+VolumeRenderer::setupView(const soglu::Camera &aCamera, const soglu::GLViewSetup &aViewSetup)
 {
 	mCgEffect.setParameter("gCamera", aCamera);
 	mCgEffect.setParameter("gViewSetup", aViewSetup );
@@ -96,23 +91,23 @@ VolumeRenderer::setupView(const Camera &aCamera, const GLViewSetup &aViewSetup)
 }
 
 void
-VolumeRenderer::setupLights(const Vector3f &aLightPosition)
+VolumeRenderer::setupLights(const glm::fvec3 &aLightPosition)
 {
 	mCgEffect.setParameter( "gLight.position", aLightPosition );
-	mCgEffect.setParameter( "gLight.color", Vector3f( 1.0f, 1.0f, 1.0f ) );
-	mCgEffect.setParameter( "gLight.ambient", Vector3f( 0.3f, 0.3f, 0.3f ) );
+	mCgEffect.setParameter( "gLight.color", glm::fvec3( 1.0f, 1.0f, 1.0f ) );
+	mCgEffect.setParameter( "gLight.ambient", glm::fvec3( 0.3f, 0.3f, 0.3f ) );
 }
 
 void
 VolumeRenderer::setupJittering(float aJitterStrength)
 {
 	mCgEffect.setTextureParameter( "gNoiseMap", mNoiseMap );
-	mCgEffect.setParameter("gNoiseMapSize", Vector2f( 32.0f, 32.0f ) );
+	mCgEffect.setParameter("gNoiseMapSize", glm::fvec2( 32.0f, 32.0f ) );
 	mCgEffect.setParameter("gJitterStrength", aJitterStrength  );
 }
 
 void
-VolumeRenderer::setupSamplingProcess(const M4D::BoundingBox3D &aBoundingBox, const Camera &aCamera, size_t aSliceCount)
+VolumeRenderer::setupSamplingProcess(const soglu::BoundingBox3D &aBoundingBox, const soglu::Camera &aCamera, size_t aSliceCount)
 {
 	/*static int edgeOrder[8*12] = {
 		 10, 11,  9,  4,  8,  5,  1,  0,  6,  2,  3,  7,
@@ -148,15 +143,15 @@ VolumeRenderer::setupSamplingProcess(const M4D::BoundingBox3D &aBoundingBox, con
 
 
 
-enum TFConfigurationFlags{
+/*enum TFConfigurationFlags{
 	tfShading	= 1,
 	tfJittering	= 1 << 1,
 	tfIntegral	= 1 << 2
-};
+};*/
 
 namespace detail {
 	
-static const uint64 FLAGS_TO_NAME_SUFFIXES_MASK = rf_SHADING | rf_JITTERING | rf_PREINTEGRATED;
+static const uint64 FLAGS_TO_NAME_SUFFIXES_MASK = tfShading | tfJittering | tfIntegral;
 static const std::string gFlagsToNameSuffixes[] = 
 	{
 		std::string("Simple"),
@@ -176,17 +171,17 @@ static const std::string gFlagsToNameSuffixes[] =
 
 void
 VolumeRenderer::basicRendering( 
-	const Camera &aCamera, 
-	const GLTextureImageTyped<3> &aImage, 
-	const M4D::BoundingBox3D &aBoundingBox, 
+	const soglu::Camera &aCamera, 
+	const soglu::GLTextureImageTyped<3> &aImage, 
+	const soglu::BoundingBox3D &aBoundingBox, 
 	size_t aSliceCount, 
 	bool aJitterEnabled,
 	float aJitterStrength, 
 	bool aEnableCutPlane,
-	Planef aCutPlane,
+	soglu::Planef aCutPlane,
 	bool aEnableInterpolation,
-	Vector2f aLutWindow,
-	const GLViewSetup &aViewSetup,
+	glm::fvec2 aLutWindow,
+	const soglu::GLViewSetup &aViewSetup,
 	bool aMIP,
 	uint64 aFlags
       			)
@@ -194,7 +189,7 @@ VolumeRenderer::basicRendering(
 	D_PRINT("FLAGS " << aFlags);
 	
 	mCgEffect.setParameter( "gPrimaryImageData3D", aImage );
-	mCgEffect.setParameter( "gMappedIntervalBands", aImage.GetMappedInterval() );
+	mCgEffect.setParameter( "gMappedIntervalBands", aImage.getMappedInterval() );
 	
 	setupView(aCamera, aViewSetup);
 	setupJittering(aJitterStrength);
@@ -213,7 +208,7 @@ VolumeRenderer::basicRendering(
 	
 	mCgEffect.executeTechniquePass(
 			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSlices_Buffered, 
+			boost::bind( &vorgl::GLDrawVolumeSlices_Buffered, 
 				aBoundingBox,
 				aCamera,
 				aSliceCount,
@@ -224,28 +219,28 @@ VolumeRenderer::basicRendering(
 			); 
 
 
-	M4D::CheckForGLError( "OGL error : " );
+	soglu::checkForGLError( "OGL error : " );
 }
 
 void
 VolumeRenderer::transferFunctionRendering( 
-	const Camera &aCamera, 
-	const GLTextureImageTyped<3> &aImage, 
-	const M4D::BoundingBox3D &aBoundingBox, 
+	const soglu::Camera &aCamera, 
+	const soglu::GLTextureImageTyped<3> &aImage, 
+	const soglu::BoundingBox3D &aBoundingBox, 
 	size_t aSliceCount, 
 	bool aJitterEnabled,
 	float aJitterStrength, 
 	bool aEnableCutPlane,
-	Planef aCutPlane,
+	soglu::Planef aCutPlane,
 	bool aEnableInterpolation,
-	const GLViewSetup &aViewSetup,
+	const soglu::GLViewSetup &aViewSetup,
 	const GLTransferFunctionBuffer1D &aTransferFunction,
-	Vector3f aLightPosition,
+	glm::fvec3 aLightPosition,
 	uint64 aFlags
 	)
 {
 	mCgEffect.setParameter( "gPrimaryImageData3D", aImage );
-	mCgEffect.setParameter( "gMappedIntervalBands", aImage.GetMappedInterval() );
+	mCgEffect.setParameter( "gMappedIntervalBands", aImage.getMappedInterval() );
 	
 	setupView(aCamera, aViewSetup);
 	setupJittering(aJitterStrength);
@@ -258,7 +253,7 @@ VolumeRenderer::transferFunctionRendering(
 
 	setupLights(aLightPosition);
 	std::string techniqueName;
-	if (aFlags & rf_PREINTEGRATED) {
+	if (aFlags & tfIntegral) {
 		mCgEffect.setParameter( "gIntegralTransferFunction1D", aTransferFunction );
 	} else {
 		mCgEffect.setParameter( "gTransferFunction1D", aTransferFunction );
@@ -270,7 +265,7 @@ VolumeRenderer::transferFunctionRendering(
 	
 	mCgEffect.executeTechniquePass(
 			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSlices_Buffered, 
+			boost::bind( &vorgl::GLDrawVolumeSlices_Buffered, 
 				aBoundingBox,
 				aCamera,
 				aSliceCount,
@@ -280,7 +275,7 @@ VolumeRenderer::transferFunctionRendering(
 				) 
 			); 
 
-	M4D::CheckForGLError( "OGL error : " );
+	soglu::checkForGLError( "OGL error : " );
 }
 
 

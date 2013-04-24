@@ -58,14 +58,16 @@ struct RGBAf
 	float r, g, b, a;
 };
 	
-class TransferFunctionBuffer1D
+class TransferFunctionBuffer1D: public std::vector<RGBAf>
 {
 public:
 	typedef boost::shared_ptr< TransferFunctionBuffer1D > Ptr;
-
+	
 	typedef RGBAf 			ValueType;
-	typedef ValueType *		Iterator;
-	typedef const ValueType*	ConstIterator;
+	typedef std::vector<ValueType>	Buffer;
+	
+	typedef Buffer::iterator		Iterator;
+	typedef Buffer::const_iterator	ConstIterator;
 
 	typedef ValueType 		value_type;
 	typedef Iterator 		iterator;
@@ -73,31 +75,38 @@ public:
 
 	typedef glm::fvec2		MappedInterval;
 
-	TransferFunctionBuffer1D( size_t aSize = 0, MappedInterval aMappedInterval = MappedInterval( 0.0f, 1.0f ) );
+	
+	
+	TransferFunctionBuffer1D( size_t aSize = 0, MappedInterval aMappedInterval = MappedInterval( 0.0f, 1.0f ) ) : Buffer(aSize)
+	{ /*empty*/ }
 
-	~TransferFunctionBuffer1D();
+	~TransferFunctionBuffer1D()
+	{ /*empty*/ }
 
+
+	/*Iterator
+	begin();
 
 	Iterator
-	Begin();
-
-	Iterator
-	End();
+	end();
 
 	ConstIterator
-	Begin()const;
+	begin()const;
 
 	ConstIterator
-	End()const;
+	end()const;
 
 	size_t
-	Size()const;
+	size()const
+	{ return mBuffer.size(); }
 
 	void
-	Resize( size_t aSize );
+	resize(size_t aSize)
+	{ mBuffer.resize(); }*/
 
 	MappedInterval
-	GetMappedInterval()const;
+	getMappedInterval()const
+	{ return mMappedInterval; }
 
 	Iterator
 	GetNearest( float aValue );
@@ -108,7 +117,7 @@ public:
 	int
 	GetNearestIndex( float aValue )const;
 
-	ValueType &
+	/*ValueType &
 	operator[]( size_t aIdx )
 	{
 		assert( aIdx < mSize );
@@ -118,15 +127,14 @@ public:
 	ValueType
 	operator[]( size_t aIdx ) const
 	{
-		assert( aIdx < mSize );
+		assert( aIdx < mBuffer.size() );
 		return mBuffer[ aIdx ];
-	}
+	}*/
 
 	void
 	SetMappedInterval( MappedInterval aMappedInterval );
 protected:
-	RGBAf	*mBuffer;
-	size_t	mSize;
+	//std::vector<RGBAf> mBuffer;
 	MappedInterval mMappedInterval;
 private:
 
@@ -174,8 +182,57 @@ private:
 	int mSampleCount;
 };
 
-GLTransferFunctionBuffer1D::Ptr
-createGLTransferFunctionBuffer1D( const TransferFunctionBuffer1D &aTransferFunction );
+inline GLTransferFunctionBuffer1D::Ptr
+createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFunction)
+{
+	if ( aTransferFunction.size() == 0 ) {
+		throw "ErrorHandling::EBadParameter";//( "Transfer function buffer of 0 size" );
+	}
+
+	GLuint texName;
+
+	try {
+		GL_CHECKED_CALL( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+		GL_CHECKED_CALL( glPixelStorei(GL_PACK_ALIGNMENT, 1) );
+		GL_CHECKED_CALL( glGenTextures( 1, &texName ) );
+		GL_CHECKED_CALL( glBindTexture ( GL_TEXTURE_1D, texName ) );
+		GL_CHECKED_CALL( glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE ) );
+
+		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE ) );
+		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
+		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
+
+
+		GL_CHECKED_CALL( glEnable( GL_TEXTURE_1D ) );
+		
+		GL_CHECKED_CALL( glBindTexture( GL_TEXTURE_1D, texName ) );
+
+		GL_CHECKED_CALL( 
+			glTexImage1D(
+				GL_TEXTURE_1D, 
+				0, 
+				GL_RGBA32F, 
+				static_cast<GLsizei>(aTransferFunction.size()), 
+				0, 
+				GL_RGBA, 
+				GL_FLOAT, 
+				aTransferFunction.data()
+				)
+			);
+
+		
+		soglu::checkForGLError( "OGL building texture for transfer function: " );
+	} 
+	catch(std::exception &) {
+		if( texName != 0 ) {
+			glDeleteTextures( 1, &texName );
+		}
+		throw;
+	}
+
+	return GLTransferFunctionBuffer1D::Ptr(new GLTransferFunctionBuffer1D( texName, aTransferFunction.getMappedInterval(), aTransferFunction.size()));
+	//return GLTransferFunctionBuffer1D::Ptr()
+}
 
 struct TransferFunctionBufferInfo
 {
@@ -194,7 +251,7 @@ struct TransferFunctionBufferInfo
 };
 
 inline void
-setCgFXParameter(CGeffect &aEffect, std::string aName, const GLTransferFunctionBuffer1D &aTransferFunction)
+setCgFXParameter(CGeffect &aEffect, std::string aName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction)
 {
 	//TODO
 	{

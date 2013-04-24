@@ -8,6 +8,7 @@
 
 #include <vorgl/TransferFunctionBuffer.hpp>
 
+#include <boost/filesystem/path.hpp>
 
 namespace vorgl {
 
@@ -27,10 +28,10 @@ public:
 	struct RenderingConfiguration;
 
 	void
-	Initialize();
+	initialize(boost::filesystem::path aPath);
 
 	void
-	Finalize();
+	finalize();
 
 	
 	void
@@ -44,7 +45,7 @@ public:
 		bool aEnableCutPlane,
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
-		Vector2f aLutWindow,
+		glm::fvec2 aLutWindow,
 		const soglu::GLViewSetup &aViewSetup,
 		bool aMIP,
 		uint64 aFlags
@@ -63,7 +64,7 @@ public:
 		bool aEnableInterpolation,
 		const soglu::GLViewSetup &aViewSetup,
 		const vorgl::GLTransferFunctionBuffer1D &aTransferFunction,
-		Vector3f aLightPosition,
+		glm::fvec3 aLightPosition,
 		uint64 aFlags
 	);
 	
@@ -77,7 +78,7 @@ public:
 	setupSamplingProcess(const soglu::BoundingBox3D &aBoundingBox, const soglu::Camera &aCamera, size_t aSliceCount);
 	
 	void
-	setupLights(const Vector3f &aLightPosition);
+	setupLights(const glm::fvec3 &aLightPosition);
 	
 	void
 	initJitteringTexture();
