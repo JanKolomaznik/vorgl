@@ -22,11 +22,6 @@ enum TFConfigurationFlags{
 class VolumeRenderer
 {
 public:
-	//typedef std::map< std::wstring, int > ColorTransformNameToIDMap;
-	//typedef std::map< int, std::wstring > ColorTransformIDToNameMap;
-
-	struct RenderingConfiguration;
-
 	void
 	initialize(boost::filesystem::path aPath);
 

@@ -1,7 +1,47 @@
 #pragma once
-#include <boost/graph/graph_concepts.hpp>
+#include <soglu/OGLTools.hpp>
+#include <soglu/BoundingBox.hpp>
+#include <soglu/GLMUtils.hpp>
 
 namespace vorgl {
+	
+	
+inline void
+GLDrawVolumeSlice3D(
+		const glm::fvec3 	&aMin, 
+		const glm::fvec3 	&aMax,
+		float			sliceCoord,
+		soglu::CartesianPlanes	plane
+		)
+{
+	float32 sliceTexCoord = (sliceCoord - aMin[plane]) / (aMax[plane] - aMin[plane]);
+	glm::fvec2 point1 = purgeDimension( aMin, plane );
+	glm::fvec2 point3 = purgeDimension( aMax, plane );
+
+	glm::fvec2 point2( point3[0], point1[1] );
+	glm::fvec2 point4( point1[0], point3[1] );
+
+	glm::fvec3 tex1 = insertDimension( point1, sliceCoord, plane );
+	glm::fvec3 tex2 = insertDimension( point2, sliceCoord, plane );
+	glm::fvec3 tex3 = insertDimension( point3, sliceCoord, plane );
+	glm::fvec3 tex4 = insertDimension( point4, sliceCoord, plane );
+
+	//std::cout << sliceCoord << "  " << sliceTexCoord << " tex\n";
+	glBegin( GL_QUADS );
+		soglu::GLTextureVector( tex1 ); 
+		soglu::GLVertexVector( tex1 );
+
+		soglu::GLTextureVector( tex2 ); 
+		soglu::GLVertexVector( tex2 );
+
+		soglu::GLTextureVector( tex3 ); 
+		soglu::GLVertexVector( tex3 );
+
+		soglu::GLTextureVector( tex4 ); 
+		soglu::GLVertexVector( tex4 );
+	glEnd();
+}
+	
 	
 inline void
 GLDrawVolumeSlices_Buffered(

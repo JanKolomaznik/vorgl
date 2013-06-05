@@ -1,37 +1,24 @@
-#include "MedV4D/GUI/renderers/SliceRenderer.h"
+#include <vorgl/SliceGeneration.hpp>
+#include <vorgl/SliceRenderer.hpp>
+#include <soglu/OGLDrawing.hpp>
 
-namespace M4D
+namespace vorgl
 {
-namespace GUI
-{
-namespace Renderer
-{
-	
-boost::filesystem::path gSliceRendererShaderPath;
 
 void
-SliceRenderer::Initialize()
+SliceRenderer::initialize(boost::filesystem::path aPath)
 {
-	InitializeCg();
-	mCgEffect.Initialize( gSliceRendererShaderPath/*"ImageRender.cgfx"*/ );
-
-
-	mAvailableColorTransforms.clear();
-	//mAvailableColorTransforms.push_back( WideNameIdPair( L"LUT window", ctLUTWindow ) );
-	//mAvailableColorTransforms.push_back( WideNameIdPair( L"Transfer function", ctTransferFunction1D ) );
-	//mAvailableColorTransforms.push_back( WideNameIdPair( L"Region colormap", ctSimpleColorMap ) );
-	mAvailableColorTransforms.push_back( ColorTransformNameIDList::value_type( "LUT window", ctLUTWindow ) );
-	mAvailableColorTransforms.push_back( ColorTransformNameIDList::value_type( "Transfer function", ctTransferFunction1D ) );
-	mAvailableColorTransforms.push_back( ColorTransformNameIDList::value_type( "Region colormap", ctSimpleColorMap ) );
+	soglu::initializeCg();
+	mCgEffect.initialize(aPath);
 }
 
 void
-SliceRenderer::Finalize()
+SliceRenderer::finalize()
 {
 	//TODO
 }
 
-
+/*
 void
 SliceRenderer::Render( SliceRenderer::RenderingConfiguration & aConfig, const GLViewSetup &aViewSetup )
 {
@@ -103,9 +90,117 @@ SliceRenderer::Render( SliceRenderer::RenderingConfiguration & aConfig, const GL
 			);
 	}
 }
+*/
+
+void
+SliceRenderer::lutWindowRendering(
+	const soglu::GLTextureImageTyped<3> &aImage,
+	float aSlice,
+	soglu::CartesianPlanes aPlane,
+	glm::fvec2 aLutWindow,
+	bool aEnableInterpolation,
+	const soglu::GLViewSetup &aViewSetup
+	)
+{
+	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
+	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
+		
+	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
+	
+	mCgEffect.setParameter("gViewSetup", aViewSetup);
+	
+	mCgEffect.setParameter("gWLWindow", aLutWindow);
+	std::string techniqueName = "WLWindow_3D";
+
+	
+	/*
+	glColor3d( 0.0, 1.0, 1.0 );
+	vorgl::GLDrawVolumeSlice3D( 
+				aImage.getExtents().realMinimum, 
+				aImage.getExtents().realMaximum, 
+				aSlice, 
+				aPlane 
+				);*/
+		
+	mCgEffect.executeTechniquePass( 
+			techniqueName, 
+			boost::bind( &vorgl::GLDrawVolumeSlice3D, 
+				aImage.getExtents().realMinimum, 
+				aImage.getExtents().realMaximum, 
+				aSlice, 
+				aPlane 
+				)
+			);
+	glColor3d( 1.0, 0.0, 1.0 );
+	glm::fvec2 point1 = purgeDimension( aImage.getExtents().realMinimum, aPlane );
+	glm::fvec2 point3 = purgeDimension( aImage.getExtents().realMaximum, aPlane );
+	soglu::drawRectangle(point1, point3);
+}
+
+void
+SliceRenderer::transferFunctionRendering(
+	const soglu::GLTextureImageTyped<3> &aImage,
+	float aSlice,
+	soglu::CartesianPlanes aPlane,
+	const vorgl::GLTransferFunctionBuffer1D &aTransferFunction,
+	bool aEnableInterpolation,
+	const soglu::GLViewSetup &aViewSetup
+	)
+{
+	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
+	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
+		
+	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
+	
+	mCgEffect.setParameter("gViewSetup", aViewSetup);
+
+	mCgEffect.setParameter( "gTransferFunction1D", aTransferFunction );
+	std::string techniqueName = "TransferFunction1D_3DNoBlending";
+	
+	//case ctSimpleColorMap:
+	//	techniqueName = "SimpleRegionColorMap_3D";
+
+	mCgEffect.executeTechniquePass( 
+			techniqueName, 
+			boost::bind( &vorgl::GLDrawVolumeSlice3D, 
+				aImage.getExtents().realMinimum, 
+				aImage.getExtents().realMaximum, 
+				aSlice, 
+				aPlane 
+				)
+			);
+}
+
+void
+SliceRenderer::overlayMaskRendering(
+	const soglu::GLTextureImageTyped<3> &aImage,
+	float aSlice,
+	soglu::CartesianPlanes aPlane,
+	float aTransparency,
+	bool aEnableInterpolation,
+	const soglu::GLViewSetup &aViewSetup
+	)
+{
+	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
+	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
+		
+	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
+	
+	mCgEffect.setParameter("gViewSetup", aViewSetup);
+	
+	std::string techniqueName = "OverlayMask_3D";
+
+	mCgEffect.executeTechniquePass( 
+			techniqueName, 
+			boost::bind( &vorgl::GLDrawVolumeSlice3D, 
+				aImage.getExtents().realMinimum, 
+				aImage.getExtents().realMaximum, 
+				aSlice, 
+				aPlane 
+				)
+			);
+}
 
 
+}//vorgl
 
-}//Renderer
-}//GUI
-}//M4D

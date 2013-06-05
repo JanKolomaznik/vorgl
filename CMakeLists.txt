@@ -7,6 +7,7 @@ FIND_PACKAGE(Boost REQUIRED COMPONENTS program_options filesystem system timer c
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS} "include")
 
 SET(${PROJECT_NAME}_SOURCES 
+	"src/SliceRenderer.cpp"
 	"src/VolumeRenderer.cpp"
 	)
 
