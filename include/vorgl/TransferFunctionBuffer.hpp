@@ -77,7 +77,7 @@ public:
 
 	
 	
-	TransferFunctionBuffer1D( size_t aSize = 0, MappedInterval aMappedInterval = MappedInterval( 0.0f, 1.0f ) ) : Buffer(aSize)
+	TransferFunctionBuffer1D( size_t aSize = 0, MappedInterval aMappedInterval = MappedInterval( 0.0f, 1.0f ) ) : Buffer(aSize), mMappedInterval(aMappedInterval)
 	{ /*empty*/ }
 
 	~TransferFunctionBuffer1D()
@@ -258,7 +258,6 @@ setCgFXParameter(CGeffect &aEffect, std::string aName, const vorgl::GLTransferFu
 		CGparameter cgParameter = cgGetNamedEffectParameter(aEffect, (aName + ".data").c_str());
 		cgGLSetupSampler( cgParameter, aTransferFunction.getTextureID() );
 	}
-
 	soglu::detail::setCgFXParameter(aEffect, aName + ".interval", aTransferFunction.getMappedInterval() );
 
 	soglu::detail::setCgFXParameter(aEffect, aName + ".sampleCount", aTransferFunction.getSampleCount() );

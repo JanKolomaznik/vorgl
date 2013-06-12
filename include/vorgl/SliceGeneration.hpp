@@ -109,10 +109,20 @@ GLDrawVolumeSlices_Buffered(
 		}
 		indicesSize += 7;*/
 	}
+	
+	/*GLuint buff;
+	GL_CHECKED_CALL(glGenBuffers(1, &buff));
+	
+	GL_CHECKED_CALL(glBindBuffer(GL_ARRAY_BUFFER, buff));
+	
+	GL_CHECKED_CALL(glBufferData(GL_ARRAY_BUFFER,  GLsizeiptr  size,  vertices, GL_STREAM_DRAW));
+	
+	GL_CHECKED_CALL(glDeleteBuffers(1, &buff));*/
 
 	GL_CHECKED_CALL( glEnableClientState(GL_VERTEX_ARRAY) );
 	GL_CHECKED_CALL( glVertexPointer( 3, GL_FLOAT, 0, vertices ) );
 	GL_CHECKED_CALL( glDrawElements(GL_TRIANGLE_FAN, indicesSize, GL_UNSIGNED_INT, indices) );
+	//GL_CHECKED_CALL( glDrawElements(GL_LINE_LOOP, indicesSize, GL_UNSIGNED_INT, indices) );
 	GL_CHECKED_CALL( glDisableClientState(GL_VERTEX_ARRAY) );
 	GL_CHECKED_CALL( glDisable(GL_PRIMITIVE_RESTART) );
 }

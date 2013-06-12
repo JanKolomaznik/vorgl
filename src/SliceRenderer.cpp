@@ -112,7 +112,6 @@ SliceRenderer::lutWindowRendering(
 	mCgEffect.setParameter("gWLWindow", aLutWindow);
 	std::string techniqueName = "WLWindow_3D";
 
-	
 	/*
 	glColor3d( 0.0, 1.0, 1.0 );
 	vorgl::GLDrawVolumeSlice3D( 
