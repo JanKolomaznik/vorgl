@@ -130,10 +130,6 @@ SliceRenderer::lutWindowRendering(
 				aPlane 
 				)
 			);
-	glColor3d( 1.0, 0.0, 1.0 );
-	glm::fvec2 point1 = purgeDimension( aImage.getExtents().realMinimum, aPlane );
-	glm::fvec2 point3 = purgeDimension( aImage.getExtents().realMaximum, aPlane );
-	soglu::drawRectangle(point1, point3);
 }
 
 void
