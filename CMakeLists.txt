@@ -8,7 +8,9 @@ INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS} "include")
 
 SET(${PROJECT_NAME}_SOURCES 
 	"src/SliceRenderer.cpp"
+	"src/SliceGeneration.cpp"
 	"src/VolumeRenderer.cpp"
+	"src/TransferFunctionBuffer.cpp"
 	)
 
 ADD_LIBRARY(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCES})

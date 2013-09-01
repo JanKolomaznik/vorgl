@@ -3,8 +3,9 @@
 #include <soglu/BoundingBox.hpp>
 #include <soglu/Primitives.hpp>
 #include <soglu/GLTextureImage.hpp>
+#include <soglu/CgFXShader.hpp>
 #include <soglu/GLViewSetup.hpp>
-#include <soglu/OGLTools.hpp>
+//#include <soglu/OGLTools.hpp>
 
 #include <vorgl/TransferFunctionBuffer.hpp>
 
@@ -21,7 +22,7 @@ public:
 
 	void
 	finalize();
-	
+
 	void
 	lutWindowRendering(
 		const soglu::GLTextureImageTyped<3> &aImage,
@@ -31,7 +32,7 @@ public:
 		bool aEnableInterpolation,
 		const soglu::GLViewSetup &aViewSetup
 		);
-	
+
 	void
 	transferFunctionRendering(
 		const soglu::GLTextureImageTyped<3> &aImage,

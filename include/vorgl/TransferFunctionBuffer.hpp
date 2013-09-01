@@ -3,14 +3,14 @@
 /*#include "MedV4D/Common/Common.h"
 #include "MedV4D/GUI/utils/OGLTools.h"
 #include "MedV4D/GUI/managers/OpenGLManager.h"*/
-#include <GL/glew.h>
+#include <GL/gl.h>
 
 #include <boost/shared_ptr.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_precision.hpp>
 
-#include <soglu/OGLTools.hpp>
 #include <soglu/CgFXShader.hpp>
+
 #include <cassert>
 
 namespace vorgl
@@ -22,7 +22,7 @@ struct RGBAf
 	{}
 	RGBAf(float aR, float aG, float aB, float aA): r(aR), g(aG), b(aB), a(aA)
 	{}
-	
+
 	template< size_t tCoord >
 	struct ValueAccessor
 	{
@@ -37,35 +37,35 @@ struct RGBAf
 			return (&aData.r)[tCoord];
 		}
 	};
-	
-	float 
+
+	float
 	operator[](size_t aIdx)const
 	{
 		return (&r)[aIdx];
 	}
-	
+
 	float &
 	operator[](size_t aIdx)
 	{
 		return (&r)[aIdx];
 	}
-	
+
 	RGBAf operator+(const RGBAf &aArg)const
 	{
 		return RGBAf(r+aArg.r, g+aArg.g, b+aArg.b, a+aArg.a);
 	}
-	
+
 	float r, g, b, a;
 };
-	
+
 class TransferFunctionBuffer1D: public std::vector<RGBAf>
 {
 public:
 	typedef boost::shared_ptr< TransferFunctionBuffer1D > Ptr;
-	
+
 	typedef RGBAf 			ValueType;
 	typedef std::vector<ValueType>	Buffer;
-	
+
 	typedef Buffer::iterator		Iterator;
 	typedef Buffer::const_iterator	ConstIterator;
 
@@ -75,8 +75,8 @@ public:
 
 	typedef glm::fvec2		MappedInterval;
 
-	
-	
+
+
 	TransferFunctionBuffer1D( size_t aSize = 0, MappedInterval aMappedInterval = MappedInterval( 0.0f, 1.0f ) ) : Buffer(aSize), mMappedInterval(aMappedInterval)
 	{ /*empty*/ }
 
@@ -110,7 +110,7 @@ public:
 
 	Iterator
 	GetNearest( float aValue );
-	
+
 	ConstIterator
 	GetNearest( float aValue )const;
 
@@ -156,7 +156,7 @@ struct GLTransferFunctionBuffer1D
 		glDeleteTextures(1, &mGLTextureID);
 		//OpenGLManager::getInstance()->deleteTextures( mGLTextureID );
 	}
-	
+
 	friend GLTransferFunctionBuffer1D::Ptr createGLTransferFunctionBuffer1D( const TransferFunctionBuffer1D &aTransferFunction );
 
 	MappedInterval
@@ -182,57 +182,8 @@ private:
 	int mSampleCount;
 };
 
-inline GLTransferFunctionBuffer1D::Ptr
-createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFunction)
-{
-	if ( aTransferFunction.size() == 0 ) {
-		throw "ErrorHandling::EBadParameter";//( "Transfer function buffer of 0 size" );
-	}
-
-	GLuint texName;
-
-	try {
-		GL_CHECKED_CALL( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-		GL_CHECKED_CALL( glPixelStorei(GL_PACK_ALIGNMENT, 1) );
-		GL_CHECKED_CALL( glGenTextures( 1, &texName ) );
-		GL_CHECKED_CALL( glBindTexture ( GL_TEXTURE_1D, texName ) );
-		GL_CHECKED_CALL( glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE ) );
-
-		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE ) );
-		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
-		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
-
-
-		GL_CHECKED_CALL( glEnable( GL_TEXTURE_1D ) );
-		
-		GL_CHECKED_CALL( glBindTexture( GL_TEXTURE_1D, texName ) );
-
-		GL_CHECKED_CALL( 
-			glTexImage1D(
-				GL_TEXTURE_1D, 
-				0, 
-				GL_RGBA32F, 
-				static_cast<GLsizei>(aTransferFunction.size()), 
-				0, 
-				GL_RGBA, 
-				GL_FLOAT, 
-				aTransferFunction.data()
-				)
-			);
-
-		
-		soglu::checkForGLError( "OGL building texture for transfer function: " );
-	} 
-	catch(std::exception &) {
-		if( texName != 0 ) {
-			glDeleteTextures( 1, &texName );
-		}
-		throw;
-	}
-
-	return GLTransferFunctionBuffer1D::Ptr(new GLTransferFunctionBuffer1D( texName, aTransferFunction.getMappedInterval(), aTransferFunction.size()));
-	//return GLTransferFunctionBuffer1D::Ptr()
-}
+GLTransferFunctionBuffer1D::Ptr
+createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFunction);
 
 struct TransferFunctionBufferInfo
 {
@@ -250,18 +201,8 @@ struct TransferFunctionBufferInfo
 	vorgl::TransferFunctionBuffer1D::Ptr tfIntegralBuffer;
 };
 
-inline void
-setCgFXParameter(CGeffect &aEffect, std::string aName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction)
-{
-	//TODO
-	{
-		CGparameter cgParameter = cgGetNamedEffectParameter(aEffect, (aName + ".data").c_str());
-		cgGLSetupSampler( cgParameter, aTransferFunction.getTextureID() );
-	}
-	soglu::detail::setCgFXParameter(aEffect, aName + ".interval", aTransferFunction.getMappedInterval() );
-
-	soglu::detail::setCgFXParameter(aEffect, aName + ".sampleCount", aTransferFunction.getSampleCount() );
-}
+void
+setCgFXParameter(CGeffect &aEffect, std::string aName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction);
 
 } /*vorgl*/
 

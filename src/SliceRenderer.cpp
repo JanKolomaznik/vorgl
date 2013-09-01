@@ -1,6 +1,7 @@
 #include <vorgl/SliceGeneration.hpp>
 #include <vorgl/SliceRenderer.hpp>
 #include <soglu/OGLDrawing.hpp>
+#include <soglu/OGLTools.hpp>
 
 namespace vorgl
 {
@@ -26,17 +27,17 @@ SliceRenderer::Render( SliceRenderer::RenderingConfiguration & aConfig, const GL
 	if ( !primaryData ) {
 		_THROW_ ErrorHandling::EObjectUnavailable( "Primary texture not available" );
 	}
-	
+
 	mCgEffect.SetParameter( "gPrimaryImageData3D", *primaryData );
 	mCgEffect.SetParameter( "gMappedIntervalBands", primaryData->GetMappedInterval() );
-	
+
 	GLTextureImageTyped<3>::Ptr secondaryData = aConfig.secondaryImageData.lock();
 	if( secondaryData ) {
 		mCgEffect.SetParameter( "gSecondaryImageData3D", *secondaryData );
 	}
-	
+
 	mCgEffect.SetParameter( "gEnableInterpolation", aConfig.enableInterpolation );
-	
+
 	mCgEffect.SetParameter( "gViewSetup", aViewSetup );
 
 	std::string techniqueName;
@@ -46,7 +47,7 @@ SliceRenderer::Render( SliceRenderer::RenderingConfiguration & aConfig, const GL
 		{
 			mCgEffect.SetParameter( "gWLWindow", aConfig.lutWindow );
 			techniqueName = "WLWindow_3D";
-		} 
+		}
 		break;
 	case ctTransferFunction1D:
 		{
@@ -68,25 +69,25 @@ SliceRenderer::Render( SliceRenderer::RenderingConfiguration & aConfig, const GL
 		ASSERT( false );
 	}
 
-	mCgEffect.ExecuteTechniquePass( 
-			techniqueName, 
-			boost::bind( &M4D::GLDrawVolumeSlice3D, 
-				primaryData->getExtents().realMinimum, 
-				primaryData->getExtents().realMaximum, 
-				float32(aConfig.currentSlice[ aConfig.plane ]+0.5f) * primaryData->getExtents().elementExtents[aConfig.plane], 
-				aConfig.plane 
-				) 
-			); 
-	
+	mCgEffect.ExecuteTechniquePass(
+			techniqueName,
+			boost::bind( &M4D::GLDrawVolumeSlice3D,
+				primaryData->getExtents().realMinimum,
+				primaryData->getExtents().realMaximum,
+				float32(aConfig.currentSlice[ aConfig.plane ]+0.5f) * primaryData->getExtents().elementExtents[aConfig.plane],
+				aConfig.plane
+				)
+			);
+
 	if( secondaryData ) {
-		mCgEffect.ExecuteTechniquePass( 
-			"OverlayMask_3D", 
-			boost::bind( &M4D::GLDrawVolumeSlice3D, 
-				secondaryData->getExtents().realMinimum, 
-				secondaryData->getExtents().realMaximum, 
-				float32(aConfig.currentSlice[ aConfig.plane ]+0.5f) * secondaryData->getExtents().elementExtents[aConfig.plane], 
-				aConfig.plane 
-				) 
+		mCgEffect.ExecuteTechniquePass(
+			"OverlayMask_3D",
+			boost::bind( &M4D::GLDrawVolumeSlice3D,
+				secondaryData->getExtents().realMinimum,
+				secondaryData->getExtents().realMaximum,
+				float32(aConfig.currentSlice[ aConfig.plane ]+0.5f) * secondaryData->getExtents().elementExtents[aConfig.plane],
+				aConfig.plane
+				)
 			);
 	}
 }
@@ -104,30 +105,30 @@ SliceRenderer::lutWindowRendering(
 {
 	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
-		
+
 	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
-	
+
 	mCgEffect.setParameter("gViewSetup", aViewSetup);
-	
+
 	mCgEffect.setParameter("gWLWindow", aLutWindow);
 	std::string techniqueName = "WLWindow_3D";
 
 	/*
 	glColor3d( 0.0, 1.0, 1.0 );
-	vorgl::GLDrawVolumeSlice3D( 
-				aImage.getExtents().realMinimum, 
-				aImage.getExtents().realMaximum, 
-				aSlice, 
-				aPlane 
+	vorgl::GLDrawVolumeSlice3D(
+				aImage.getExtents().realMinimum,
+				aImage.getExtents().realMaximum,
+				aSlice,
+				aPlane
 				);*/
-		
-	mCgEffect.executeTechniquePass( 
-			techniqueName, 
-			boost::bind( &vorgl::GLDrawVolumeSlice3D, 
-				aImage.getExtents().realMinimum, 
-				aImage.getExtents().realMaximum, 
-				aSlice, 
-				aPlane 
+
+	mCgEffect.executeTechniquePass(
+			techniqueName,
+			boost::bind( &vorgl::GLDrawVolumeSlice3D,
+				aImage.getExtents().realMinimum,
+				aImage.getExtents().realMaximum,
+				aSlice,
+				aPlane
 				)
 			);
 }
@@ -144,24 +145,24 @@ SliceRenderer::transferFunctionRendering(
 {
 	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
-		
+
 	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
-	
+
 	mCgEffect.setParameter("gViewSetup", aViewSetup);
 
 	mCgEffect.setParameter( "gTransferFunction1D", aTransferFunction );
 	std::string techniqueName = "TransferFunction1D_3DNoBlending";
-	
+
 	//case ctSimpleColorMap:
 	//	techniqueName = "SimpleRegionColorMap_3D";
 
-	mCgEffect.executeTechniquePass( 
-			techniqueName, 
-			boost::bind( &vorgl::GLDrawVolumeSlice3D, 
-				aImage.getExtents().realMinimum, 
-				aImage.getExtents().realMaximum, 
-				aSlice, 
-				aPlane 
+	mCgEffect.executeTechniquePass(
+			techniqueName,
+			boost::bind( &vorgl::GLDrawVolumeSlice3D,
+				aImage.getExtents().realMinimum,
+				aImage.getExtents().realMaximum,
+				aSlice,
+				aPlane
 				)
 			);
 }
@@ -178,20 +179,20 @@ SliceRenderer::overlayMaskRendering(
 {
 	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
-		
+
 	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
-	
+
 	mCgEffect.setParameter("gViewSetup", aViewSetup);
-	
+
 	std::string techniqueName = "OverlayMask_3D";
 
-	mCgEffect.executeTechniquePass( 
-			techniqueName, 
-			boost::bind( &vorgl::GLDrawVolumeSlice3D, 
-				aImage.getExtents().realMinimum, 
-				aImage.getExtents().realMaximum, 
-				aSlice, 
-				aPlane 
+	mCgEffect.executeTechniquePass(
+			techniqueName,
+			boost::bind( &vorgl::GLDrawVolumeSlice3D,
+				aImage.getExtents().realMinimum,
+				aImage.getExtents().realMaximum,
+				aSlice,
+				aPlane
 				)
 			);
 }
