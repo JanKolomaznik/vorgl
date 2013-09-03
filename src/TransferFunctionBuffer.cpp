@@ -1,7 +1,9 @@
+#include <GL/glew.h>
 #include <vorgl/TransferFunctionBuffer.hpp>
 #include <soglu/CgFXShader.hpp>
 #include <soglu/TextureUtils.hpp>
 #include <soglu/ErrorHandling.hpp>
+#include <cmath>
 
 namespace vorgl
 {
@@ -9,7 +11,7 @@ namespace vorgl
 TransferFunctionBuffer1D::Iterator
 TransferFunctionBuffer1D::GetNearest( float aValue )
 {
-	int idx = round( ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size() );
+	int idx = floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size() );
 	if ( idx < 0 || idx >= (int)size() ) {
 		return end();
 	}
@@ -20,7 +22,7 @@ TransferFunctionBuffer1D::GetNearest( float aValue )
 TransferFunctionBuffer1D::ConstIterator
 TransferFunctionBuffer1D::GetNearest( float aValue )const
 {
-	int idx = round( ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size() );
+	int idx = floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size() );
 	if ( idx < 0 || idx >= (int)size() ) {
 		return end();
 	}
@@ -31,7 +33,7 @@ TransferFunctionBuffer1D::GetNearest( float aValue )const
 int
 TransferFunctionBuffer1D::GetNearestIndex( float aValue )const
 {
-	int idx = round( ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size());
+	int idx = floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size());
 	if ( idx < 0 ) {
 		return -1;
 	}
