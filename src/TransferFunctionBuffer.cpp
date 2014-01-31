@@ -88,7 +88,7 @@ createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFuncti
 			);
 
 
-		soglu::checkForGLError( "OGL building texture for transfer function: " );
+		// soglu::checkForGLError( "OGL building texture for transfer function: " );
 	}
 	catch(std::exception &) {
 		if( texName != 0 ) {

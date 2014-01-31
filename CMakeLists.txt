@@ -1,6 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 PROJECT(VORGL)
 
+
+if(UNIX)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC")
+endif(UNIX )
+
 set(Boost_USE_STATIC_LIBS   ON)
 set(Boost_USE_MULTITHREADED ON)
 FIND_PACKAGE(Boost REQUIRED COMPONENTS program_options filesystem system timer chrono)
