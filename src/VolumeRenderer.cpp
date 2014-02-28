@@ -209,15 +209,16 @@ VolumeRenderer::basicRendering(
 
 	mCgEffect.executeTechniquePass(
 			techniqueName,
-			boost::bind( &vorgl::GLDrawVolumeSlices_Intermediate,
-				aBoundingBox,
-				aCamera,
-				aSliceCount,
-				mVertices,
-				mIndices,
-				1.0f
-				)
-			);
+			[aBoundingBox, &aCamera, aSliceCount, this] ()
+			{
+				vorgl::GLDrawVolumeSlices_Buffered(
+					aBoundingBox,
+					aCamera,
+					aSliceCount,
+					mVertices,
+					mIndices,
+					1.0f);
+			});
 
 
 	soglu::checkForGLError( "OGL error : " );
@@ -266,15 +267,16 @@ VolumeRenderer::transferFunctionRendering(
 
 	mCgEffect.executeTechniquePass(
 			techniqueName,
-			boost::bind( &vorgl::GLDrawVolumeSlices_Intermediate,
-				aBoundingBox,
-				aCamera,
-				aSliceCount,
-				mVertices,
-				mIndices,
-				1.0f
-				)
-			);
+			[aBoundingBox, &aCamera, aSliceCount, this] ()
+			{
+				vorgl::GLDrawVolumeSlices_Buffered(
+					aBoundingBox,
+					aCamera,
+					aSliceCount,
+					mVertices,
+					mIndices,
+					1.0f);
+			});
 	soglu::checkForGLError( "OGL error : " );
 }
 
