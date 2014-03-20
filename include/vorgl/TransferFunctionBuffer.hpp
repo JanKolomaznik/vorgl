@@ -5,10 +5,12 @@
 #include "MedV4D/GUI/managers/OpenGLManager.h"*/
 
 #if defined _WIN64 || defined _WIN32
-#define NOMINMAX
-#include <windows.h>
-#undef near
-#undef far
+#	ifndef NOMINMAX
+#		define NOMINMAX
+#	endif //NOMINMAX
+#	include <windows.h>
+#	undef near
+#	undef far
 #endif
 
 #include <GL/gl.h>
@@ -18,6 +20,7 @@
 #include <glm/gtc/type_precision.hpp>
 
 #include <soglu/CgFXShader.hpp>
+#include <soglu/GLSLShader.hpp>
 
 #include <cassert>
 
@@ -161,7 +164,7 @@ struct GLTransferFunctionBuffer1D
 	~GLTransferFunctionBuffer1D()
 	{
 		assert(soglu::isGLContextActive());
-		glDeleteTextures(1, &mGLTextureID);
+		glDeleteTextures(1, &(mGLTextureID.value));
 		//OpenGLManager::getInstance()->deleteTextures( mGLTextureID );
 	}
 
@@ -171,7 +174,7 @@ struct GLTransferFunctionBuffer1D
 	getMappedInterval()const
 	{ return mMappedInterval; }
 
-	GLuint
+	soglu::TextureId
 	getTextureID()const
 	{ return mGLTextureID; }
 
@@ -185,7 +188,7 @@ private:
 		: mGLTextureID( aGLTextureID ), mMappedInterval( aMappedInterval ), mSampleCount( aSampleCount )
 	{ /* empty */ }
 
-	GLuint	mGLTextureID;
+	soglu::TextureId mGLTextureID;
 	MappedInterval mMappedInterval;
 	int mSampleCount;
 };
@@ -211,6 +214,15 @@ struct TransferFunctionBufferInfo
 
 void
 setCgFXParameter(CGeffect &aEffect, std::string aName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction);
+
+inline void
+setUniform(soglu::GLSLProgram &aProgram, const std::string &aUniformName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction, soglu::TextureUnitId aTextureUnit)
+{
+	soglu::gl::bindTexture(aTextureUnit, soglu::TextureTarget::Texture1D, aTransferFunction.getTextureID());
+	aProgram.setUniformByName(aUniformName + ".data", aTextureUnit);
+	aProgram.setUniformByName(aUniformName + ".interval", aTransferFunction.getMappedInterval() );
+	aProgram.setUniformByName(aUniformName + ".sampleCount", aTransferFunction.getSampleCount() );
+}
 
 } /*vorgl*/
 

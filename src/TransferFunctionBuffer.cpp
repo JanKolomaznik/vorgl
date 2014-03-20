@@ -11,7 +11,7 @@ namespace vorgl
 TransferFunctionBuffer1D::Iterator
 TransferFunctionBuffer1D::GetNearest( float aValue )
 {
-	int idx = floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size() );
+	int idx = int(floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * float(size())));
 	if ( idx < 0 || idx >= (int)size() ) {
 		return end();
 	}
@@ -22,7 +22,7 @@ TransferFunctionBuffer1D::GetNearest( float aValue )
 TransferFunctionBuffer1D::ConstIterator
 TransferFunctionBuffer1D::GetNearest( float aValue )const
 {
-	int idx = floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size() );
+	int idx = int(floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * float(size())));
 	if ( idx < 0 || idx >= (int)size() ) {
 		return end();
 	}
@@ -33,7 +33,7 @@ TransferFunctionBuffer1D::GetNearest( float aValue )const
 int
 TransferFunctionBuffer1D::GetNearestIndex( float aValue )const
 {
-	int idx = floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * (float)size());
+	int idx = int(floor(0.5f + ( aValue - mMappedInterval[0] ) / ( mMappedInterval[1] - mMappedInterval[0] ) * float(size())));
 	if ( idx < 0 ) {
 		return -1;
 	}
@@ -97,7 +97,7 @@ createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFuncti
 		throw;
 	}
 
-	return GLTransferFunctionBuffer1D::Ptr(new GLTransferFunctionBuffer1D( texName, aTransferFunction.getMappedInterval(), aTransferFunction.size()));
+	return GLTransferFunctionBuffer1D::Ptr(new GLTransferFunctionBuffer1D( texName, aTransferFunction.getMappedInterval(), int(aTransferFunction.size())));
 	//return GLTransferFunctionBuffer1D::Ptr()
 }
 

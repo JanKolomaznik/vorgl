@@ -33,14 +33,12 @@ applyVolumeRestrictionsOnBoundingBox(soglu::BoundingBox3D &aBBox, const VolumeRe
 void
 VolumeRenderer::initialize(boost::filesystem::path aPath)
 {
-	soglu::initializeCg();
-	mCgEffect.initialize(aPath/*"ImageRender.cgfx"*/);
+	//soglu::initializeCg();
+	//mCgEffect.initialize(aPath/*"ImageRender.cgfx"*/);
+
+	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "volume.vert.glsl", aPath / "volume.frag.glsl");
 
 	initJitteringTexture();
-
-	mMaxSampleCount = 0;
-	mVertices = NULL;
-	mIndices = NULL;
 }
 
 void
@@ -86,25 +84,24 @@ VolumeRenderer::finalize()
 void
 VolumeRenderer::setupView(const soglu::Camera &aCamera, const soglu::GLViewSetup &aViewSetup)
 {
-	mCgEffect.setParameter("gCamera", aCamera);
-	mCgEffect.setParameter("gViewSetup", aViewSetup );
-	//mCgEffect.SetGLStateMatrixParameter( "gModelViewProj", CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY );
+	//mCgEffect.setParameter("gCamera", aCamera);
+	//mCgEffect.setParameter("gViewSetup", aViewSetup );
 }
 
 void
 VolumeRenderer::setupLights(const glm::fvec3 &aLightPosition)
 {
-	mCgEffect.setParameter( "gLight.position", aLightPosition );
-	mCgEffect.setParameter( "gLight.color", glm::fvec3( 1.0f, 1.0f, 1.0f ) );
-	mCgEffect.setParameter( "gLight.ambient", glm::fvec3( 0.3f, 0.3f, 0.3f ) );
+	//mCgEffect.setParameter( "gLight.position", aLightPosition );
+	//mCgEffect.setParameter( "gLight.color", glm::fvec3( 1.0f, 1.0f, 1.0f ) );
+	//mCgEffect.setParameter( "gLight.ambient", glm::fvec3( 0.3f, 0.3f, 0.3f ) );
 }
 
 void
 VolumeRenderer::setupJittering(float aJitterStrength)
 {
-	mCgEffect.setTextureParameter( "gNoiseMap", mNoiseMap );
-	mCgEffect.setParameter("gNoiseMapSize", glm::fvec2( 32.0f, 32.0f ) );
-	mCgEffect.setParameter("gJitterStrength", aJitterStrength  );
+	//mCgEffect.setTextureParameter( "gNoiseMap", mNoiseMap );
+	//mCgEffect.setParameter("gNoiseMapSize", glm::fvec2( 32.0f, 32.0f ) );
+	//mCgEffect.setParameter("gJitterStrength", aJitterStrength  );
 }
 
 void
@@ -138,8 +135,8 @@ VolumeRenderer::setupSamplingProcess(const soglu::BoundingBox3D &aBoundingBox, c
 		       	maxId
 			);
 	float renderingSliceThickness = (max-min)/static_cast< float >( aSliceCount );
-
-	mCgEffect.setParameter("gRenderingSliceThickness", renderingSliceThickness);
+	mShaderProgram.setUniformByName("gRenderingSliceThickness", renderingSliceThickness);
+	//mCgEffect.setParameter("gRenderingSliceThickness", renderingSliceThickness);
 }
 
 
@@ -187,7 +184,7 @@ VolumeRenderer::basicRendering(
 	uint64 aFlags
       			)
 {
-	D_PRINT("FLAGS " << aFlags);
+	/*D_PRINT("FLAGS " << aFlags);
 
 	mCgEffect.setParameter( "gPrimaryImageData3D", aImage );
 	mCgEffect.setParameter( "gMappedIntervalBands", aImage.getMappedInterval() );
@@ -220,7 +217,7 @@ VolumeRenderer::basicRendering(
 			);
 
 
-	soglu::checkForGLError( "OGL error : " );
+	soglu::checkForGLError( "OGL error : " );*/
 }
 
 void
@@ -228,7 +225,7 @@ VolumeRenderer::transferFunctionRendering(
 	const soglu::Camera &aCamera,
 	const soglu::GLTextureImageTyped<3> &aImage,
 	const soglu::BoundingBox3D &aBoundingBox,
-	size_t aSliceCount,
+	int aSliceCount,
 	bool aJitterEnabled,
 	float aJitterStrength,
 	bool aEnableCutPlane,
@@ -240,7 +237,34 @@ VolumeRenderer::transferFunctionRendering(
 	uint64 aFlags
 	)
 {
-	mCgEffect.setParameter( "gPrimaryImageData3D", aImage );
+	GL_ERROR_CLEAR_AFTER_CALL();
+	aSliceCount = 3;
+	mShaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
+	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(GL_TEXTURE0));
+	//mShaderProgram.setUniformByName("gTransferFunction1D", aTransferFunction); // TODO - setUniform for transfer function
+	setUniform(mShaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(GL_TEXTURE1));
+
+	mShaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
+	setupSamplingProcess(aBoundingBox, aCamera, aSliceCount);
+	int vertexLocation = mShaderProgram.getAttributeLocation("vertex");
+	mShaderProgram.bind();
+
+	vorgl::generateVolumeSlices(
+		aBoundingBox,
+		aCamera,
+		aSliceCount,
+		1.0f,
+		mSliceBuffers
+		);
+	soglu::drawVertexIndexBuffers(
+		mSliceBuffers,
+		GL_TRIANGLE_FAN,
+		//GL_LINE_LOOP,
+		vertexLocation
+		);
+	soglu::gl::useProgram(0);
+	mShaderProgram.unbind();
+	/*mCgEffect.setParameter( "gPrimaryImageData3D", aImage );
 	mCgEffect.setParameter( "gMappedIntervalBands", aImage.getMappedInterval() );
 
 	setupView(aCamera, aViewSetup);
@@ -275,7 +299,7 @@ VolumeRenderer::transferFunctionRendering(
 				1.0f
 				)
 			);
-	soglu::checkForGLError( "OGL error : " );
+	soglu::checkForGLError( "OGL error : " );*/
 }
 
 

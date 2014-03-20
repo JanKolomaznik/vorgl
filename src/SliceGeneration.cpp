@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include <vorgl/SliceGeneration.hpp>
+#include <soglu/OGLDrawing.hpp>
 #include <array>
 
 namespace vorgl {
@@ -42,6 +43,101 @@ GLDrawVolumeSlice3D(
 }
 
 void
+generateVolumeSlices(
+		const soglu::BoundingBox3D	&bbox,
+		const soglu::Camera		&camera,
+		unsigned 		numberOfSteps,
+		float			cutPlane,
+		soglu::VertexIndexBuffers &buffers
+		)
+{
+	buffers.vertices.resize((numberOfSteps + 1) * 7);
+	buffers.indices.resize((numberOfSteps + 1) * 7);
+	buffers.primitiveRestartIndex = numberOfSteps * 20;
+
+	float 				min = 0;
+	float 				max = 0;
+	unsigned			minId = 0;
+	unsigned			maxId = 0;
+	soglu::getBBoxMinMaxDistance(
+		bbox,
+		camera.eyePosition(),
+		camera.targetDirection(),
+		min,
+		max,
+		minId,
+		maxId
+		);
+
+	float stepSize = cutPlane * (max - min) / numberOfSteps;
+	glm::fvec3 planePoint = camera.eyePosition() + (camera.targetDirection() * max);
+
+	glm::fvec3 *currentVertexPtr = buffers.vertices.data();
+	unsigned *currentIndexPtr = buffers.indices.data();
+	size_t primitiveStartIndex = 0;
+	size_t indicesSize = 0;
+	for( unsigned i = 0; i < numberOfSteps; ++i ) {
+		//Obtain intersection of the optical axis and the currently rendered plane
+		planePoint -= stepSize * camera.targetDirection();
+		//Get n-gon as intersection of the current plane and bounding box
+		unsigned count = soglu::getPlaneVerticesInBoundingBox(
+				bbox, planePoint, camera.targetDirection(), minId, currentVertexPtr
+				);
+
+
+		currentVertexPtr += count;
+		for( unsigned j = 0; j < count; ++j ) {
+			*(currentIndexPtr++) = primitiveStartIndex + j;
+		}
+		*(currentIndexPtr++) = buffers.primitiveRestartIndex;
+		primitiveStartIndex += count;
+
+		indicesSize += count+1;
+	}
+	buffers.indices.resize(indicesSize);
+	buffers.vertices.resize(primitiveStartIndex);
+
+	/*GLuint buff;
+	GL_CHECKED_CALL(glGenBuffers(1, &buff));
+
+	GL_CHECKED_CALL(glBindBuffer(GL_ARRAY_BUFFER, buff));
+
+	GL_CHECKED_CALL(glBufferData(GL_ARRAY_BUFFER,  GLsizeiptr  size,  vertices, GL_STREAM_DRAW));
+
+	GL_CHECKED_CALL(glDeleteBuffers(1, &buff));*/
+
+	/*GL_CHECKED_CALL( glEnableClientState(GL_VERTEX_ARRAY) );
+	//GL_CHECKED_CALL( glVertexPointer( 3, GL_FLOAT, 0, vertices ) );
+	glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE, 0, vertices);
+	//GL_CHECKED_CALL( glDrawElements(GL_TRIANGLE_FAN, indicesSize, GL_UNSIGNED_INT, indices) );
+	GL_CHECKED_CALL( glDrawElements(GL_LINE_LOOP, indicesSize, GL_UNSIGNED_INT, indices) );
+	GL_CHECKED_CALL( glDisableClientState(GL_VERTEX_ARRAY) );
+	GL_CHECKED_CALL( glDisable(GL_PRIMITIVE_RESTART) );*/
+	/*GLuint g_verticesVBO;
+	GLuint g_vao;
+	glGenBuffers(1, &g_verticesVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, g_verticesVBO);
+    glBufferData(GL_ARRAY_BUFFER, 3 * primitiveStartIndex * sizeof(GLfloat), (GLfloat*) vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glGenVertexArrays(1, &g_vao);
+    glBindVertexArray(g_vao);
+
+    // Bind the only used VBO in this example.
+    glBindBuffer(GL_ARRAY_BUFFER, g_verticesVBO);
+    glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(vertexLocation);
+
+	glDrawElements(GL_LINE_LOOP, indicesSize, GL_UNSIGNED_INT, indices);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glDeleteBuffers(1, &g_verticesVBO);
+	glBindVertexArray(0);
+    glDeleteVertexArrays(1, &g_vao);*/
+}
+
+
+void
 GLDrawVolumeSlices_Buffered(
 		const soglu::BoundingBox3D	&bbox,
 		const soglu::Camera		&camera,
@@ -79,8 +175,8 @@ GLDrawVolumeSlices_Buffered(
 		minId,
 		maxId
 		);
-numberOfSteps = 1;
-	float stepSize = cutPlane * (max - min) / 2;//numberOfSteps;
+
+	float stepSize = cutPlane * (max - min) / numberOfSteps;
 	glm::fvec3 planePoint = camera.eyePosition() + (camera.targetDirection() * max);
 
 	glm::fvec3 *currentVertexPtr = vertices;
@@ -91,16 +187,12 @@ numberOfSteps = 1;
 		//Obtain intersection of the optical axis and the currently rendered plane
 		planePoint -= stepSize * camera.targetDirection();
 		//Get n-gon as intersection of the current plane and bounding box
-		/*unsigned count = soglu::getPlaneVerticesInBoundingBox(
-				bbox, planePoint, camera.targetDirection(), minId, currentVertexPtr
-				);*/
 		unsigned count = soglu::getPlaneVerticesInBoundingBox(
-				bbox, soglu::Planef(planePoint, camera.targetDirection()), currentVertexPtr
+				bbox, planePoint, camera.targetDirection(), minId, currentVertexPtr
 				);
 
+
 		currentVertexPtr += count;
-		//currentVertexPtr += 6;
-		//primitiveStartIndex += 6;
 		for( unsigned j = 0; j < count; ++j ) {
 			*(currentIndexPtr++) = primitiveStartIndex + j;
 		}
@@ -108,19 +200,6 @@ numberOfSteps = 1;
 		primitiveStartIndex += count;
 
 		indicesSize += count+1;
-
-		std::cout << "----------------------- " << count << "\n";
-		for (auto i = vertices; i <= currentVertexPtr; ++i) {
-			std::cout << "point " << *i << "\n";
-		}
-		std::cout << "+++++++++++++++++++++++\n";
-		for (auto i = 0; i <= indicesSize; ++i) {
-			std::cout << "index " << indices[i] << "\n";
-		}
-		/*for( unsigned j = count; j <= 6; ++j ) {
-			*(currentIndexPtr++) = primitiveRestart;
-		}
-		indicesSize += 7;*/
 	}
 
 	/*GLuint buff;
@@ -134,8 +213,8 @@ numberOfSteps = 1;
 
 	GL_CHECKED_CALL( glEnableClientState(GL_VERTEX_ARRAY) );
 	GL_CHECKED_CALL( glVertexPointer( 3, GL_FLOAT, 0, vertices ) );
-	GL_CHECKED_CALL( glDrawElements(GL_TRIANGLE_FAN, indicesSize, GL_UNSIGNED_INT, indices) );
-	//GL_CHECKED_CALL( glDrawElements(GL_LINE_LOOP, indicesSize, GL_UNSIGNED_INT, indices) );
+	//GL_CHECKED_CALL( glDrawElements(GL_TRIANGLE_FAN, indicesSize, GL_UNSIGNED_INT, indices) );
+	GL_CHECKED_CALL( glDrawElements(GL_LINE_LOOP, indicesSize, GL_UNSIGNED_INT, indices) );
 	GL_CHECKED_CALL( glDisableClientState(GL_VERTEX_ARRAY) );
 	GL_CHECKED_CALL( glDisable(GL_PRIMITIVE_RESTART) );
 }

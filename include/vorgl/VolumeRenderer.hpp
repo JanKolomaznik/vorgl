@@ -5,6 +5,8 @@
 #include <soglu/Primitives.hpp>
 #include <soglu/GLTextureImage.hpp>
 #include <soglu/GLViewSetup.hpp>
+#include <soglu/GLSLShader.hpp>
+#include <soglu/OGLDrawing.hpp>
 
 #include <vorgl/TransferFunctionBuffer.hpp>
 
@@ -47,21 +49,21 @@ public:
      	);
 	
 	void
-	transferFunctionRendering( 
-		const soglu::Camera &aCamera, 
-		const soglu::GLTextureImageTyped<3> &aImage, 
-		const soglu::BoundingBox3D &aBoundingBox, 
-		size_t aSliceCount, 
+	transferFunctionRendering(
+		const soglu::Camera &aCamera,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const soglu::BoundingBox3D &aBoundingBox,
+		int aSliceCount,
 		bool aJitterEnabled,
-		float aJitterStrength, 
+		float aJitterStrength,
 		bool aEnableCutPlane,
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
 		const soglu::GLViewSetup &aViewSetup,
-		const vorgl::GLTransferFunctionBuffer1D &aTransferFunction,
+		const GLTransferFunctionBuffer1D &aTransferFunction,
 		glm::fvec3 aLightPosition,
 		uint64 aFlags
-	);
+		);
 	
 	void
 	setupJittering(float aJitterStrength);
@@ -78,7 +80,7 @@ public:
 	void
 	initJitteringTexture();
 
-	void
+	/*void
 	reallocateArrays( size_t aNewMaxSampleCount )
 	{
 		if( mVertices ) {
@@ -91,16 +93,19 @@ public:
 		mVertices = new glm::fvec3[ (aNewMaxSampleCount+1) * 6 ];
 		mIndices = new unsigned[ (aNewMaxSampleCount+1) * 7 ];
 		mMaxSampleCount = aNewMaxSampleCount;
-	}
+	}*/
+
+	soglu::GLSLProgram mShaderProgram;
 
 	CGcontext   				mCgContext;
 	soglu::CgFXShader			mCgEffect;
 	GLuint					mNoiseMap;
 
+	soglu::VertexIndexBuffers mSliceBuffers;
 	
-	glm::fvec3 *mVertices;
+	/*glm::fvec3 *mVertices;
 	unsigned *mIndices;
-	size_t		mMaxSampleCount;
+	size_t		mMaxSampleCount;*/
 };
 
 

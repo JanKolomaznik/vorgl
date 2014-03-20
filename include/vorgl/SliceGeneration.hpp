@@ -1,7 +1,7 @@
 #pragma once
 #include <soglu/BoundingBox.hpp>
 #include <soglu/Camera.hpp>
-
+#include <soglu/OGLDrawing.hpp>
 #include <soglu/OGLTools.hpp>
 #include <soglu/GLMUtils.hpp>
 
@@ -16,6 +16,14 @@ GLDrawVolumeSlice3D(
 		soglu::CartesianPlanes	plane
 		);
 
+void
+generateVolumeSlices(
+		const soglu::BoundingBox3D	&bbox,
+		const soglu::Camera		&camera,
+		unsigned 		numberOfSteps,
+		float			cutPlane,
+		soglu::VertexIndexBuffers &buffers
+		);
 
 void
 GLDrawVolumeSlices_Buffered(

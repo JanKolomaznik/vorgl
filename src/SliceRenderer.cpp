@@ -9,8 +9,8 @@ namespace vorgl
 void
 SliceRenderer::initialize(boost::filesystem::path aPath)
 {
-	soglu::initializeCg();
-	mCgEffect.initialize(aPath);
+	//soglu::initializeCg();
+	//mCgEffect.initialize(aPath);
 }
 
 void
@@ -103,7 +103,7 @@ SliceRenderer::lutWindowRendering(
 	const soglu::GLViewSetup &aViewSetup
 	)
 {
-	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
+	/*mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
 
 	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
@@ -113,15 +113,6 @@ SliceRenderer::lutWindowRendering(
 	mCgEffect.setParameter("gWLWindow", aLutWindow);
 	std::string techniqueName = "WLWindow_3D";
 
-	/*
-	glColor3d( 0.0, 1.0, 1.0 );
-	vorgl::GLDrawVolumeSlice3D(
-				aImage.getExtents().realMinimum,
-				aImage.getExtents().realMaximum,
-				aSlice,
-				aPlane
-				);*/
-
 	mCgEffect.executeTechniquePass(
 			techniqueName,
 			boost::bind( &vorgl::GLDrawVolumeSlice3D,
@@ -130,7 +121,7 @@ SliceRenderer::lutWindowRendering(
 				aSlice,
 				aPlane
 				)
-			);
+			);*/
 }
 
 void
@@ -143,7 +134,7 @@ SliceRenderer::transferFunctionRendering(
 	const soglu::GLViewSetup &aViewSetup
 	)
 {
-	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
+	/*mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
 
 	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
@@ -153,9 +144,6 @@ SliceRenderer::transferFunctionRendering(
 	mCgEffect.setParameter( "gTransferFunction1D", aTransferFunction );
 	std::string techniqueName = "TransferFunction1D_3DNoBlending";
 
-	//case ctSimpleColorMap:
-	//	techniqueName = "SimpleRegionColorMap_3D";
-
 	mCgEffect.executeTechniquePass(
 			techniqueName,
 			boost::bind( &vorgl::GLDrawVolumeSlice3D,
@@ -164,7 +152,7 @@ SliceRenderer::transferFunctionRendering(
 				aSlice,
 				aPlane
 				)
-			);
+			);*/
 }
 
 void
@@ -177,7 +165,7 @@ SliceRenderer::overlayMaskRendering(
 	const soglu::GLViewSetup &aViewSetup
 	)
 {
-	mCgEffect.setParameter("gPrimaryImageData3D", aImage);
+	/*mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
 
 	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
@@ -194,7 +182,7 @@ SliceRenderer::overlayMaskRendering(
 				aSlice,
 				aPlane
 				)
-			);
+			);*/
 }
 
 

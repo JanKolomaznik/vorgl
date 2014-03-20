@@ -11,6 +11,13 @@ set(Boost_USE_MULTITHREADED ON)
 FIND_PACKAGE(Boost REQUIRED COMPONENTS program_options filesystem system timer chrono)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS} "include")
 
+SET(${PROJECT_NAME}_HEADERS
+	"include/vorgl/SliceGeneration.hpp"
+	"include/vorgl/SliceRenderer.hpp" 
+	"include/vorgl/TransferFunctionBuffer.hpp"
+	"include/vorgl/VolumeRenderer.hpp" 
+	)
+
 SET(${PROJECT_NAME}_SOURCES 
 	"src/SliceRenderer.cpp"
 	"src/SliceGeneration.cpp"
@@ -18,7 +25,7 @@ SET(${PROJECT_NAME}_SOURCES
 	"src/TransferFunctionBuffer.cpp"
 	)
 
-ADD_LIBRARY(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCES})
+ADD_LIBRARY(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX _d ) 
 IF(WIN32)
 	SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES STATIC_LIBRARY_FLAGS /NODEFAULTLIB)
