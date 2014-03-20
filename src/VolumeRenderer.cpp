@@ -238,11 +238,10 @@ VolumeRenderer::transferFunctionRendering(
 	)
 {
 	GL_ERROR_CLEAR_AFTER_CALL();
-	aSliceCount = 3;
 	mShaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
-	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(GL_TEXTURE0));
+	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(0));
 	//mShaderProgram.setUniformByName("gTransferFunction1D", aTransferFunction); // TODO - setUniform for transfer function
-	setUniform(mShaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(GL_TEXTURE1));
+	setUniform(mShaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(1));
 
 	mShaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
 	setupSamplingProcess(aBoundingBox, aCamera, aSliceCount);
