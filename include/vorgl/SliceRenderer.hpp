@@ -5,6 +5,7 @@
 #include <soglu/GLTextureImage.hpp>
 #include <soglu/CgFXShader.hpp>
 #include <soglu/GLViewSetup.hpp>
+#include <soglu/utils.hpp>
 //#include <soglu/OGLTools.hpp>
 
 #include <vorgl/TransferFunctionBuffer.hpp>
@@ -53,8 +54,9 @@ public:
 		const soglu::GLViewSetup &aViewSetup
 		);
 protected:
-	CGcontext   				mCgContext;
-	soglu::CgFXShader			mCgEffect;
+	soglu::GLSLProgram mShaderProgram;
+	soglu::Sampler mLinearInterpolationSampler;
+	soglu::Sampler mNoInterpolationSampler;
 };
 
 

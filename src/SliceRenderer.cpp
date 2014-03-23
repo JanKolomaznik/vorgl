@@ -11,12 +11,23 @@ SliceRenderer::initialize(boost::filesystem::path aPath)
 {
 	//soglu::initializeCg();
 	//mCgEffect.initialize(aPath);
+	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "slice.vert.glsl", aPath / "slice.frag.glsl");
+
+	mLinearInterpolationSampler.initialize();
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	mNoInterpolationSampler.initialize();
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
 void
 SliceRenderer::finalize()
 {
-	//TODO
+	mShaderProgram.finalize();
+	mLinearInterpolationSampler.finalize();
+	mNoInterpolationSampler.finalize();
 }
 
 /*
@@ -103,6 +114,26 @@ SliceRenderer::lutWindowRendering(
 	const soglu::GLViewSetup &aViewSetup
 	)
 {
+	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(0));
+	if (aEnableInterpolation) {
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(0));
+	} else {
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(0));
+	}
+	mShaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
+	mShaderProgram.setUniformByName("gWLWindow", aLutWindow);
+	mShaderProgram.setUniformByName("gViewSetup", aViewSetup);
+
+	int vertexLocation = mShaderProgram.getAttributeLocation("vertex");
+	mShaderProgram.use([&aImage, aSlice, aPlane, vertexLocation]() {
+			soglu::drawVertexBuffer(
+				generateVolumeSlice(aImage.getExtents().realMinimum, aImage.getExtents().realMaximum, aSlice, aPlane),
+				GL_TRIANGLE_FAN,
+				vertexLocation
+				);
+		});
+
+	soglu::Sampler::unbind(soglu::TextureUnitId(0));
 	/*mCgEffect.setParameter("gPrimaryImageData3D", aImage);
 	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
 

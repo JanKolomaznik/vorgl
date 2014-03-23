@@ -7,6 +7,13 @@
 
 namespace vorgl {
 
+std::vector<glm::fvec3>
+generateVolumeSlice(
+		const glm::fvec3        &aMin,
+		const glm::fvec3        &aMax,
+		float			        aSliceCoord,
+		soglu::CartesianPlanes  aPlane
+		);
 
 void
 GLDrawVolumeSlice3D(

@@ -238,7 +238,8 @@ VolumeRenderer::transferFunctionRendering(
 	)
 {
 	GL_ERROR_CLEAR_AFTER_CALL();
-	mShaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
+	mShaderProgram.setUniformByName("gViewSetup", aViewSetup);
+	//mShaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
 	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(0));
 	//mShaderProgram.setUniformByName("gTransferFunction1D", aTransferFunction); // TODO - setUniform for transfer function
 	setUniform(mShaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(1));

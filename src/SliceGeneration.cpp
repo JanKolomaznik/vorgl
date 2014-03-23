@@ -3,8 +3,29 @@
 #include <soglu/OGLDrawing.hpp>
 #include <array>
 
+
 namespace vorgl {
 
+std::vector<glm::fvec3>
+generateVolumeSlice(
+		const glm::fvec3        &aMin,
+		const glm::fvec3        &aMax,
+		float			        aSliceCoord,
+		soglu::CartesianPlanes  aPlane
+		)
+{
+	std::vector<glm::fvec3> points(4);
+
+	float sliceTexCoord = (aSliceCoord - aMin[aPlane]) / (aMax[aPlane] - aMin[aPlane]);
+	glm::fvec2 p1 = purgeDimension(aMin, aPlane);
+	glm::fvec2 p2 = purgeDimension(aMax, aPlane);
+	points[0] = insertDimension(p1, aSliceCoord, aPlane);
+	points[2] = insertDimension(p2, aSliceCoord, aPlane);
+
+	points[1] = insertDimension(glm::fvec2(p2[0], p1[1]), aSliceCoord, aPlane);
+	points[3] = insertDimension(glm::fvec2(p1[0], p2[1]), aSliceCoord, aPlane);
+	return points;
+}
 
 void
 GLDrawVolumeSlice3D(

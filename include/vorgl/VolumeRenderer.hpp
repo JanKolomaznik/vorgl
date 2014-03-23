@@ -80,32 +80,10 @@ public:
 	void
 	initJitteringTexture();
 
-	/*void
-	reallocateArrays( size_t aNewMaxSampleCount )
-	{
-		if( mVertices ) {
-			delete [] mVertices;
-		}
-		if( mIndices ) {
-			delete [] mIndices;
-		}
-
-		mVertices = new glm::fvec3[ (aNewMaxSampleCount+1) * 6 ];
-		mIndices = new unsigned[ (aNewMaxSampleCount+1) * 7 ];
-		mMaxSampleCount = aNewMaxSampleCount;
-	}*/
-
 	soglu::GLSLProgram mShaderProgram;
-
-	CGcontext   				mCgContext;
-	soglu::CgFXShader			mCgEffect;
 	GLuint					mNoiseMap;
 
 	soglu::VertexIndexBuffers mSliceBuffers;
-	
-	/*glm::fvec3 *mVertices;
-	unsigned *mIndices;
-	size_t		mMaxSampleCount;*/
 };
 
 
