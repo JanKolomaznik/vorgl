@@ -84,8 +84,8 @@ VolumeRenderer::initJitteringTexture()
 		buf[i] = static_cast<uint8>( 255.0f * rand()/(float)RAND_MAX );
 	}
 	GL_CHECKED_CALL(glGenTextures(1, &(mNoiseMap.value) ));
+	soglu::gl::bindTexture(soglu::TextureUnitId(2), soglu::TextureTarget::Texture2D, mNoiseMap);
 	//glActiveTextureARB(GL_TEXTURE3_ARB);
-	GL_CHECKED_CALL(glBindTexture( GL_TEXTURE_2D, mNoiseMap ));
 	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT ));
 	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT ));
 	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ));
@@ -119,8 +119,11 @@ VolumeRenderer::setupView(const soglu::Camera &aCamera, const soglu::GLViewSetup
 }
 
 void
-VolumeRenderer::setupLights(const glm::fvec3 &aLightPosition)
+VolumeRenderer::setupLights(soglu::GLSLProgram &aShaderProgram, const glm::fvec3 &aLightPosition)
 {
+	aShaderProgram.setUniformByName("gLight.position", aLightPosition);
+	aShaderProgram.setUniformByName("gLight.color", glm::fvec3( 1.0f, 1.0f, 1.0f ));
+	aShaderProgram.setUniformByName("gLight.ambient", glm::fvec3( 0.3f, 0.3f, 0.3f ));
 	//mCgEffect.setParameter( "gLight.position", aLightPosition );
 	//mCgEffect.setParameter( "gLight.color", glm::fvec3( 1.0f, 1.0f, 1.0f ) );
 	//mCgEffect.setParameter( "gLight.ambient", glm::fvec3( 0.3f, 0.3f, 0.3f ) );
@@ -282,6 +285,7 @@ VolumeRenderer::transferFunctionRendering(
 	shaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
 	setupSamplingProcess(shaderProgram, aBoundingBox, aCamera, aSliceCount);
 	setupJittering(shaderProgram, aJitterStrength);
+	setupLights(shaderProgram, aLightPosition);
 	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
 	shaderProgram.bind();
 

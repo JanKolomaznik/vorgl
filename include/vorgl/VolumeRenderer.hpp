@@ -148,7 +148,7 @@ public:
 	setupSamplingProcess(soglu::GLSLProgram &aShaderProgram, const soglu::BoundingBox3D &aBoundingBox, const soglu::Camera &aCamera, size_t aSliceCount);
 
 	void
-	setupLights(const glm::fvec3 &aLightPosition);
+	setupLights(soglu::GLSLProgram &aShaderProgram, const glm::fvec3 &aLightPosition);
 
 	void
 	initJitteringTexture();
