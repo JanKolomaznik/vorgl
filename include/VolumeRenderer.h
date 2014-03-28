@@ -17,14 +17,14 @@ namespace Renderer
 {
 
 extern boost::filesystem::path gVolumeRendererShaderPath;
-	
+
 struct VolumeRestrictions
 {
 	VolumeRestrictions(): resX( 0.0f, 1.0f ), resY( 0.0f, 1.0f ), resZ( 0.0f, 1.0f )
 	{}
 	VolumeRestrictions( const Vector2f &aX, const Vector2f &aY, const Vector2f &aZ ): resX( aX ), resY( aY ), resZ( aZ )
 	{}
-	
+
 	void
 	get( Vector2f &aX, Vector2f &aY, Vector2f &aZ )const
 	{
@@ -62,7 +62,7 @@ public:
 
 	void
 	Finalize();
-	
+
 	virtual void
 	Render( RenderingConfiguration & aConfig, const GLViewSetup &aViewSetup );
 
@@ -92,7 +92,7 @@ protected:
 
 	CGcontext   				mCgContext;
 	CgEffect				mCgEffect;
-	GLuint					mNoiseMap;
+	TextureUnitId				mNoiseMap;
 
 	ColorTransformNameIDList		mAvailableColorTransforms;
 
@@ -104,23 +104,23 @@ protected:
 struct VolumeRenderer::RenderingConfiguration
 {
 	RenderingConfiguration()
-		: //primaryImageData( NULL ), 
-		//secondaryImageData( NULL ), 
-		colorTransform( ctMaxIntensityProjection ), 
-		jitterEnabled( true ), 
-		jitterStrength( 1.0f ), 
-		shadingEnabled( true ), 
-		integralTFEnabled( false ), 
-		sampleCount( 150 ), 
-		enableInterpolation(true ), 
-		enableVolumeRestrictions( false ), 
-		enableCutPlane( false ), 
+		: //primaryImageData( NULL ),
+		//secondaryImageData( NULL ),
+		colorTransform( ctMaxIntensityProjection ),
+		jitterEnabled( true ),
+		jitterStrength( 1.0f ),
+		shadingEnabled( true ),
+		integralTFEnabled( false ),
+		sampleCount( 150 ),
+		enableInterpolation(true ),
+		enableVolumeRestrictions( false ),
+		enableCutPlane( false ),
 		cutPlaneCameraTargetOffset( 0.0f ),
 		multiDatasetRenderingStyle( mdrsOnlyPrimary )
 	{ }
 	GLTextureImage3D::WPtr			primaryImageData;
 	GLTextureImage3D::WPtr			secondaryImageData;
-	
+
 	int					colorTransform;
 	GLTransferFunctionBuffer1D::ConstWPtr	transferFunction;
 	GLTransferFunctionBuffer1D::ConstWPtr	integralTransferFunction;
@@ -130,7 +130,7 @@ struct VolumeRenderer::RenderingConfiguration
 	float					jitterStrength;
 	bool					shadingEnabled;
 	bool					integralTFEnabled;
-	size_t					sampleCount;				
+	size_t					sampleCount;
 	bool					enableInterpolation;
 
 	Vector3f				lightPosition;
@@ -141,7 +141,7 @@ struct VolumeRenderer::RenderingConfiguration
 	bool					enableCutPlane;
 	Planef					cutPlane;
 	float					cutPlaneCameraTargetOffset;
-	
+
 	MultiDatasetRenderingStyle		multiDatasetRenderingStyle;
 };
 

@@ -35,8 +35,40 @@ VolumeRenderer::initialize(boost::filesystem::path aPath)
 {
 	//soglu::initializeCg();
 	//mCgEffect.initialize(aPath/*"ImageRender.cgfx"*/);
+	boost::filesystem::path vertexShaderPath = aPath / "volume.vert.glsl";
+	boost::filesystem::path fragmentShaderPath = aPath / "volume.frag.glsl";
 
-	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "volume.vert.glsl", aPath / "volume.frag.glsl");
+	std::string vertexShaderCode = soglu::loadFile(vertexShaderPath);
+	std::string fragmentShaderCode = soglu::loadFile(fragmentShaderPath);
+	auto vertexShader = std::make_shared<soglu::GLSLVertexShader>(vertexShaderCode);
+
+	static std::unordered_map<TFRenderFlags, std::string, Hasher<TFRenderFlags>> flagDefines = [this]() {
+			// TODO - use initializer_list (waiting for VS 2013)
+			std::unordered_map<TFRenderFlags, std::string, Hasher<TFRenderFlags>> defines;
+			defines[TFRenderFlags::JITTERING] = "#define ENABLE_JITTERING\n";
+			defines[TFRenderFlags::SHADING] = "#define ENABLE_SHADING\n";
+			defines[TFRenderFlags::PREINTEGRATED_TF] = "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
+			return defines;
+		} ();
+
+	for (int i = static_cast<int>(TFRenderFlags::NO_FLAGS); i <= static_cast<int>(TFRenderFlags::ALL_FLAGS); ++i) {
+		TransferFunctionRenderFlags flags(i);
+		std::string defines = "#version 150\n";
+		for (const auto & def : flagDefines) {
+			if (flags.test(def.first)) {
+				defines += def.second;
+			}
+		}
+		soglu::GLSLProgram program(true);
+		program.attachShader(vertexShader);
+		program.attachShader(std::make_shared<soglu::GLSLFragmentShader>(defines + fragmentShaderCode));
+		program.link();
+		program.validate();
+
+		mTFShaderPrograms[flags] = std::move(program);
+	}
+
+//	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(, aPath / "volume.frag.glsl");
 
 	initJitteringTexture();
 }
@@ -44,34 +76,32 @@ VolumeRenderer::initialize(boost::filesystem::path aPath)
 void
 VolumeRenderer::initJitteringTexture()
 {
-	//TODO make better - destroy
+	std::cout << "Init noise texture\n";
 	int size = 32;
-	uint8 * buf = new uint8[size*size];
+	std::vector<uint8> buf(size * size);
 	srand( (unsigned)time(NULL) );
 	for( int i = 0; i < size*size; ++i ) {
 		buf[i] = static_cast<uint8>( 255.0f * rand()/(float)RAND_MAX );
 	}
-	glGenTextures(1, &mNoiseMap );
+	GL_CHECKED_CALL(glGenTextures(1, &(mNoiseMap.value) ));
 	//glActiveTextureARB(GL_TEXTURE3_ARB);
-	glBindTexture( GL_TEXTURE_2D, mNoiseMap );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-	glTexImage2D(
+	GL_CHECKED_CALL(glBindTexture( GL_TEXTURE_2D, mNoiseMap ));
+	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT ));
+	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT ));
+	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ));
+	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ));
+	GL_CHECKED_CALL(glTexImage2D(
 			GL_TEXTURE_2D,
 			0,
-			GL_LUMINANCE8,
+			GL_R8,
 			size,
 			size,
 			0,
-			GL_LUMINANCE,
+			GL_RED,
 			GL_UNSIGNED_BYTE,
-			buf
-		    );
-	glBindTexture( GL_TEXTURE_2D, 0 );
-
-	delete buf;
+			buf.data()
+		    ));
+	GL_CHECKED_CALL(glBindTexture( GL_TEXTURE_2D, 0 ));
 }
 
 void
@@ -97,15 +127,19 @@ VolumeRenderer::setupLights(const glm::fvec3 &aLightPosition)
 }
 
 void
-VolumeRenderer::setupJittering(float aJitterStrength)
+VolumeRenderer::setupJittering(soglu::GLSLProgram &aShaderProgram, float aJitterStrength)
 {
+	soglu::gl::bindTexture(soglu::TextureUnitId(2), soglu::TextureTarget::Texture2D, mNoiseMap);
+	aShaderProgram.setUniformByName("gNoiseMap", soglu::TextureUnitId(2));
+	aShaderProgram.setUniformByName("gNoiseMapSize", glm::fvec2(32.0f, 32.0f));
+	aShaderProgram.setUniformByName("gJitterStrength", aJitterStrength);
 	//mCgEffect.setTextureParameter( "gNoiseMap", mNoiseMap );
 	//mCgEffect.setParameter("gNoiseMapSize", glm::fvec2( 32.0f, 32.0f ) );
 	//mCgEffect.setParameter("gJitterStrength", aJitterStrength  );
 }
 
 void
-VolumeRenderer::setupSamplingProcess(const soglu::BoundingBox3D &aBoundingBox, const soglu::Camera &aCamera, size_t aSliceCount)
+VolumeRenderer::setupSamplingProcess(soglu::GLSLProgram &aShaderProgram, const soglu::BoundingBox3D &aBoundingBox, const soglu::Camera &aCamera, size_t aSliceCount)
 {
 	/*static int edgeOrder[8*12] = {
 		 10, 11,  9,  4,  8,  5,  1,  0,  6,  2,  3,  7,
@@ -135,7 +169,7 @@ VolumeRenderer::setupSamplingProcess(const soglu::BoundingBox3D &aBoundingBox, c
 		       	maxId
 			);
 	float renderingSliceThickness = (max-min)/static_cast< float >( aSliceCount );
-	mShaderProgram.setUniformByName("gRenderingSliceThickness", renderingSliceThickness);
+	aShaderProgram.setUniformByName("gRenderingSliceThickness", renderingSliceThickness);
 	//mCgEffect.setParameter("gRenderingSliceThickness", renderingSliceThickness);
 }
 
@@ -226,7 +260,6 @@ VolumeRenderer::transferFunctionRendering(
 	const soglu::GLTextureImageTyped<3> &aImage,
 	const soglu::BoundingBox3D &aBoundingBox,
 	int aSliceCount,
-	bool aJitterEnabled,
 	float aJitterStrength,
 	bool aEnableCutPlane,
 	soglu::Planef aCutPlane,
@@ -234,20 +267,23 @@ VolumeRenderer::transferFunctionRendering(
 	const soglu::GLViewSetup &aViewSetup,
 	const GLTransferFunctionBuffer1D &aTransferFunction,
 	glm::fvec3 aLightPosition,
-	uint64 aFlags
+	VolumeRenderer::TransferFunctionRenderFlags aFlags
 	)
 {
 	GL_ERROR_CLEAR_AFTER_CALL();
-	mShaderProgram.setUniformByName("gViewSetup", aViewSetup);
-	//mShaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
-	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(0));
-	//mShaderProgram.setUniformByName("gTransferFunction1D", aTransferFunction); // TODO - setUniform for transfer function
-	setUniform(mShaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(1));
+	soglu::GLSLProgram &shaderProgram = mTFShaderPrograms[aFlags];
+	shaderProgram.setUniformByName("gCamera", aCamera);
+	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
+	//shaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
+	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(0));
+	//shaderProgram.setUniformByName("gTransferFunction1D", aTransferFunction); // TODO - setUniform for transfer function
+	setUniform(shaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(1));
 
-	mShaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
-	setupSamplingProcess(aBoundingBox, aCamera, aSliceCount);
-	int vertexLocation = mShaderProgram.getAttributeLocation("vertex");
-	mShaderProgram.bind();
+	shaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
+	setupSamplingProcess(shaderProgram, aBoundingBox, aCamera, aSliceCount);
+	setupJittering(shaderProgram, aJitterStrength);
+	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
+	shaderProgram.bind();
 
 	vorgl::generateVolumeSlices(
 		aBoundingBox,
@@ -262,8 +298,7 @@ VolumeRenderer::transferFunctionRendering(
 		//GL_LINE_LOOP,
 		vertexLocation
 		);
-	soglu::gl::useProgram(0);
-	mShaderProgram.unbind();
+	shaderProgram.unbind();
 	/*mCgEffect.setParameter( "gPrimaryImageData3D", aImage );
 	mCgEffect.setParameter( "gMappedIntervalBands", aImage.getMappedInterval() );
 
