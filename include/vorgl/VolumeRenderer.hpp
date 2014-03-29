@@ -25,7 +25,7 @@ public:
 	Flags() : mRaw() {}
 	Flags(RawType aInitValue) : mRaw(aInitValue) {}
 
-	Flags(Flags const&) = default;
+	//Flags(Flags const&) = default;
 
 	Flags<Enum> &
 	set(TEnum e)
