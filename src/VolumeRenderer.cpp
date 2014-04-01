@@ -84,8 +84,7 @@ VolumeRenderer::initJitteringTexture()
 		buf[i] = static_cast<uint8>( 255.0f * rand()/(float)RAND_MAX );
 	}
 	GL_CHECKED_CALL(glGenTextures(1, &(mNoiseMap.value) ));
-	soglu::gl::bindTexture(soglu::TextureUnitId(2), soglu::TextureTarget::Texture2D, mNoiseMap);
-	//glActiveTextureARB(GL_TEXTURE3_ARB);
+	soglu::gl::bindTexture(soglu::TextureUnitId(cJitteringTextureUnit), soglu::TextureTarget::Texture2D, mNoiseMap);
 	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT ));
 	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT ));
 	GL_CHECKED_CALL(glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST ));
@@ -132,8 +131,8 @@ VolumeRenderer::setupLights(soglu::GLSLProgram &aShaderProgram, const glm::fvec3
 void
 VolumeRenderer::setupJittering(soglu::GLSLProgram &aShaderProgram, float aJitterStrength)
 {
-	soglu::gl::bindTexture(soglu::TextureUnitId(2), soglu::TextureTarget::Texture2D, mNoiseMap);
-	aShaderProgram.setUniformByName("gNoiseMap", soglu::TextureUnitId(2));
+	soglu::gl::bindTexture(soglu::TextureUnitId(cJitteringTextureUnit), soglu::TextureTarget::Texture2D, mNoiseMap);
+	aShaderProgram.setUniformByName("gNoiseMap", soglu::TextureUnitId(cJitteringTextureUnit));
 	aShaderProgram.setUniformByName("gNoiseMapSize", glm::fvec2(32.0f, 32.0f));
 	aShaderProgram.setUniformByName("gJitterStrength", aJitterStrength);
 	//mCgEffect.setTextureParameter( "gNoiseMap", mNoiseMap );
@@ -278,9 +277,9 @@ VolumeRenderer::transferFunctionRendering(
 	shaderProgram.setUniformByName("gCamera", aCamera);
 	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
 	//shaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
-	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(0));
+	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
 	//shaderProgram.setUniformByName("gTransferFunction1D", aTransferFunction); // TODO - setUniform for transfer function
-	setUniform(shaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(1));
+	setUniform(shaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(cTransferFunctionTextureUnit));
 
 	shaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
 	setupSamplingProcess(shaderProgram, aBoundingBox, aCamera, aSliceCount);

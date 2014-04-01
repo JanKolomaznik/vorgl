@@ -97,6 +97,12 @@ public:
 		ALL_FLAGS       = (1 << 3) - 1
 	};
 
+	enum {
+		cJitteringTextureUnit = 10,
+		cData1TextureUnit = 11,
+		cTransferFunctionTextureUnit = 12
+	};
+
 	typedef Flags<TFRenderFlags> TransferFunctionRenderFlags;
 	void
 	initialize(boost::filesystem::path aPath);
