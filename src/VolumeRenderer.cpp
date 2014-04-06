@@ -59,6 +59,7 @@ VolumeRenderer::initialize(boost::filesystem::path aPath)
 				defines += def.second;
 			}
 		}
+		SOGLU_DEBUG_PRINT("Creating volume renderer shader program. Defines: \n" << defines);
 		soglu::GLSLProgram program(true);
 		program.attachShader(vertexShader);
 		program.attachShader(std::make_shared<soglu::GLSLFragmentShader>(defines + fragmentShaderCode));
@@ -69,6 +70,15 @@ VolumeRenderer::initialize(boost::filesystem::path aPath)
 	}
 
 //	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(, aPath / "volume.frag.glsl");
+
+	mLinearInterpolationSampler.initialize();
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	mNoInterpolationSampler.initialize();
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 
 	initJitteringTexture();
 }
@@ -278,6 +288,12 @@ VolumeRenderer::transferFunctionRendering(
 	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
 	//shaderProgram.setUniformByName("modelViewProj", glm::mat4(aViewSetup.modelViewProj));
 	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
+	if (aEnableInterpolation) {
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+	} else {
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+	}
+
 	//shaderProgram.setUniformByName("gTransferFunction1D", aTransferFunction); // TODO - setUniform for transfer function
 	setUniform(shaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(cTransferFunctionTextureUnit));
 

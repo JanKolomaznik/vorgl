@@ -11,6 +11,7 @@ SliceRenderer::initialize(boost::filesystem::path aPath)
 {
 	//soglu::initializeCg();
 	//mCgEffect.initialize(aPath);
+	SOGLU_DEBUG_PRINT("Loading slice renderer shader program.");
 	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "slice.vert.glsl", aPath / "slice.frag.glsl");
 
 	mLinearInterpolationSampler.initialize();
@@ -114,11 +115,11 @@ SliceRenderer::lutWindowRendering(
 	const soglu::GLViewSetup &aViewSetup
 	)
 {
-	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(0));
+	mShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
 	if (aEnableInterpolation) {
-		mLinearInterpolationSampler.bind(soglu::TextureUnitId(0));
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	} else {
-		mNoInterpolationSampler.bind(soglu::TextureUnitId(0));
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	}
 	mShaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
 	mShaderProgram.setUniformByName("gWLWindow", aLutWindow);

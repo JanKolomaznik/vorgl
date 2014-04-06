@@ -99,8 +99,8 @@ public:
 
 	enum {
 		cJitteringTextureUnit = 10,
-		cData1TextureUnit = 11,
-		cTransferFunctionTextureUnit = 12
+		cTransferFunctionTextureUnit = 11,
+		cData1TextureUnit = 12,
 	};
 
 	typedef Flags<TFRenderFlags> TransferFunctionRenderFlags;
@@ -162,6 +162,9 @@ public:
 	std::unordered_map<TransferFunctionRenderFlags, soglu::GLSLProgram, Hasher<TFRenderFlags>> mTFShaderPrograms;
 	soglu::TextureId mNoiseMap;
 	soglu::VertexIndexBuffers mSliceBuffers;
+
+	soglu::Sampler mLinearInterpolationSampler;
+	soglu::Sampler mNoInterpolationSampler;
 };
 
 

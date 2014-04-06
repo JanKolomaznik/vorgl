@@ -17,6 +17,9 @@ namespace vorgl {
 class SliceRenderer
 {
 public:
+	enum {
+		cData1TextureUnit = 12
+	};
 
 	void
 	initialize(boost::filesystem::path aPath);
