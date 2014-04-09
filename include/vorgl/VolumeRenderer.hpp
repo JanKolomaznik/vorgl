@@ -87,7 +87,7 @@ enum TFConfigurationFlags{
 class VolumeRenderer
 {
 public:
-	enum class TFRenderFlags : uint16_t {
+	enum class TFFlags : uint16_t {
 		NO_FLAGS         = 0,
 
 		JITTERING        = 1,
@@ -97,13 +97,25 @@ public:
 		ALL_FLAGS       = (1 << 3) - 1
 	};
 
+	enum class DensityFlags : uint16_t {
+		NO_FLAGS         = 0,
+
+		JITTERING        = 1,
+		MIP             = 1 << 1,
+
+		ALL_FLAGS       = (1 << 2) - 1
+	};
+
 	enum {
 		cJitteringTextureUnit = 10,
 		cTransferFunctionTextureUnit = 11,
 		cData1TextureUnit = 12,
 	};
 
-	typedef Flags<TFRenderFlags> TransferFunctionRenderFlags;
+	typedef Flags<TFFlags> TransferFunctionRenderFlags;
+	typedef Flags<DensityFlags> DensityRenderFlags;
+
+
 	void
 	initialize(boost::filesystem::path aPath);
 
@@ -112,36 +124,32 @@ public:
 
 
 	void
-	basicRendering(
+	densityRendering(
 		const soglu::Camera &aCamera,
+		const soglu::GLViewSetup &aViewSetup,
 		const soglu::GLTextureImageTyped<3> &aImage,
 		const soglu::BoundingBox3D &aBoundingBox,
+		glm::fvec2 aLutWindow,
 		size_t aSliceCount,
-		bool aJitterEnabled,
-		float aJitterStrength,
 		bool aEnableCutPlane,
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
-		glm::fvec2 aLutWindow,
-		const soglu::GLViewSetup &aViewSetup,
-		bool aMIP,
-		uint64 aFlags
-     	);
+		VolumeRenderer::DensityRenderFlags aFlags
+		);
 
 	void
 	transferFunctionRendering(
 		const soglu::Camera &aCamera,
+		const soglu::GLViewSetup &aViewSetup,
 		const soglu::GLTextureImageTyped<3> &aImage,
 		const soglu::BoundingBox3D &aBoundingBox,
+		const GLTransferFunctionBuffer1D &aTransferFunction,
 		int aSliceCount,
-		float aJitterStrength,
 		bool aEnableCutPlane,
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
-		const soglu::GLViewSetup &aViewSetup,
-		const GLTransferFunctionBuffer1D &aTransferFunction,
 		glm::fvec3 aLightPosition,
-		TransferFunctionRenderFlags aFlags
+		VolumeRenderer::TransferFunctionRenderFlags aFlags
 		);
 
 	void
@@ -159,12 +167,14 @@ public:
 	void
 	initJitteringTexture();
 
-	std::unordered_map<TransferFunctionRenderFlags, soglu::GLSLProgram, Hasher<TFRenderFlags>> mTFShaderPrograms;
+	std::unordered_map<TransferFunctionRenderFlags, soglu::GLSLProgram, Hasher<TFFlags>> mTFShaderPrograms;
+	std::unordered_map<DensityRenderFlags, soglu::GLSLProgram, Hasher<DensityFlags>> mDensityShaderPrograms;
 	soglu::TextureId mNoiseMap;
 	soglu::VertexIndexBuffers mSliceBuffers;
 
 	soglu::Sampler mLinearInterpolationSampler;
 	soglu::Sampler mNoInterpolationSampler;
+	float mJitterStrength;
 };
 
 
