@@ -22,7 +22,7 @@ public:
 	};
 
 	void
-	initialize(boost::filesystem::path aPath);
+	initialize(const boost::filesystem::path &aPath);
 
 	void
 	finalize();
@@ -56,6 +56,10 @@ public:
 		bool aEnableInterpolation,
 		const soglu::GLViewSetup &aViewSetup
 		);
+
+	void
+	loadShaders(const boost::filesystem::path &aPath);
+	
 protected:
 	soglu::GLSLProgram mShaderProgram;
 	soglu::Sampler mLinearInterpolationSampler;

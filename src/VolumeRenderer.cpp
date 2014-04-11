@@ -31,9 +31,27 @@ applyVolumeRestrictionsOnBoundingBox(soglu::BoundingBox3D &aBBox, const VolumeRe
 }*/
 
 void
-VolumeRenderer::initialize(boost::filesystem::path aPath)
+VolumeRenderer::initialize(const boost::filesystem::path &aPath)
 {
 	mJitterStrength = 1.0f;
+
+	loadShaders(aPath);
+
+	mLinearInterpolationSampler.initialize();
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	mNoInterpolationSampler.initialize();
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+
+	initJitteringTexture();
+}
+
+void
+VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
+{
 	boost::filesystem::path vertexShaderPath = aPath / "volume.vert.glsl";
 	boost::filesystem::path fragmentShaderPath = aPath / "volume.frag.glsl";
 
@@ -52,7 +70,7 @@ VolumeRenderer::initialize(boost::filesystem::path aPath)
 
 	for (int i = static_cast<int>(TFFlags::NO_FLAGS); i <= static_cast<int>(TFFlags::ALL_FLAGS); ++i) {
 		TransferFunctionRenderFlags flags(i);
-		std::string defines = "#version 150\n#define TRANSFER_FUNCTION_RENDERING";
+		std::string defines = "#version 150\n#define TRANSFER_FUNCTION_RENDERING\n";
 		for (const auto & def : tfFlagDefines) {
 			if (flags.test(def.first)) {
 				defines += def.second;
@@ -93,20 +111,6 @@ VolumeRenderer::initialize(boost::filesystem::path aPath)
 
 		mDensityShaderPrograms[flags] = std::move(program);
 	}
-
-
-//	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(, aPath / "volume.frag.glsl");
-
-	mLinearInterpolationSampler.initialize();
-	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	mNoInterpolationSampler.initialize();
-	mNoInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	mNoInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-
-	initJitteringTexture();
 }
 
 void

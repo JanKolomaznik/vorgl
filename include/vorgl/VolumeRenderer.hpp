@@ -117,7 +117,7 @@ public:
 
 
 	void
-	initialize(boost::filesystem::path aPath);
+	initialize(const boost::filesystem::path &aPath);
 
 	void
 	finalize();
@@ -166,6 +166,9 @@ public:
 
 	void
 	initJitteringTexture();
+
+	void
+	loadShaders(const boost::filesystem::path &aPath);
 
 	std::unordered_map<TransferFunctionRenderFlags, soglu::GLSLProgram, Hasher<TFFlags>> mTFShaderPrograms;
 	std::unordered_map<DensityRenderFlags, soglu::GLSLProgram, Hasher<DensityFlags>> mDensityShaderPrograms;
