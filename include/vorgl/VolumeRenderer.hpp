@@ -122,6 +122,19 @@ public:
 	void
 	finalize();
 
+	void
+	rayCasting(
+		const soglu::Camera &aCamera,
+		const soglu::GLViewSetup &aViewSetup,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const soglu::BoundingBox3D &aBoundingBox,
+		glm::fvec2 aLutWindow,
+		size_t aSliceCount,
+		bool aEnableCutPlane,
+		soglu::Planef aCutPlane,
+		bool aEnableInterpolation,
+		VolumeRenderer::TransferFunctionRenderFlags aFlags
+		);
 
 	void
 	densityRendering(
@@ -169,6 +182,8 @@ public:
 
 	void
 	loadShaders(const boost::filesystem::path &aPath);
+
+	soglu::GLSLProgram mRayCastingProgram;
 
 	std::unordered_map<TransferFunctionRenderFlags, soglu::GLSLProgram, Hasher<TFFlags>> mTFShaderPrograms;
 	std::unordered_map<DensityRenderFlags, soglu::GLSLProgram, Hasher<DensityFlags>> mDensityShaderPrograms;

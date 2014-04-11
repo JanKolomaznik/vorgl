@@ -9,7 +9,7 @@ namespace vorgl
 void
 SliceRenderer::initialize(const boost::filesystem::path &aPath)
 {
-	loadShaders(aPath);	
+	loadShaders(aPath);
 
 	mLinearInterpolationSampler.initialize();
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -31,8 +31,9 @@ SliceRenderer::finalize()
 void
 SliceRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
-	SOGLU_DEBUG_PRINT("Loading slice renderer shader program.");
+	SOGLU_DEBUG_PRINT("Loading slice renderer shader programs.");
 	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "slice.vert.glsl", aPath / "slice.frag.glsl");
+	SOGLU_DEBUG_PRINT("Slice renderer shader programs loaded.");
 }
 
 /*
