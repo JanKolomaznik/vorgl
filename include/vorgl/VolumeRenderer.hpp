@@ -133,7 +133,8 @@ public:
 		bool aEnableCutPlane,
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
-		VolumeRenderer::TransferFunctionRenderFlags aFlags
+		VolumeRenderer::TransferFunctionRenderFlags aFlags,
+		soglu::TextureId aDepthBuffer
 		);
 
 	void
@@ -184,6 +185,7 @@ public:
 	loadShaders(const boost::filesystem::path &aPath);
 
 	soglu::GLSLProgram mRayCastingProgram;
+	soglu::GLSLProgram mBasicShaderProgram;
 
 	std::unordered_map<TransferFunctionRenderFlags, soglu::GLSLProgram, Hasher<TFFlags>> mTFShaderPrograms;
 	std::unordered_map<DensityRenderFlags, soglu::GLSLProgram, Hasher<DensityFlags>> mDensityShaderPrograms;

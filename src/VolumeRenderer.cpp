@@ -59,6 +59,8 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 	mRayCastingProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(vertexShaderPath, aPath / "testvolume.frag.glsl");
 	SOGLU_DEBUG_PRINT("Raycasting renderer shader program loaded.");
 
+	mBasicShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "basic_vertex.glsl", aPath / "basic_fragment.glsl");
+
 	std::string vertexShaderCode = soglu::loadFile(vertexShaderPath);
 	std::string fragmentShaderCode = soglu::loadFile(fragmentShaderPath);
 	auto vertexShader = std::make_shared<soglu::GLSLVertexShader>(vertexShaderCode);
@@ -292,10 +294,12 @@ VolumeRenderer::rayCasting(
 		bool aEnableCutPlane,
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
-		VolumeRenderer::TransferFunctionRenderFlags aFlags
+		VolumeRenderer::TransferFunctionRenderFlags aFlags,
+		soglu::TextureId aDepthBuffer
 		)
 {
 	soglu::GLSLProgram &shaderProgram = mRayCastingProgram;
+	//soglu::GLSLProgram &shaderProgram = mBasicShaderProgram;
 	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
 	auto programBinder = getBinder(shaderProgram);
 
@@ -306,11 +310,14 @@ VolumeRenderer::rayCasting(
 	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
 	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
 	shaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
+	shaderProgram.setUniformByName("gWLWindow", aLutWindow);
 	if (aEnableInterpolation) {
 		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	} else {
 		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	}
+	
+	shaderProgram.setUniformByName("gDepthBuffer", aDepthBuffer);
 
 	soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aBoundingBox), GL_TRIANGLE_STRIP, vertexLocation);
 	GL_CHECKED_CALL(glDisable(GL_CULL_FACE));
