@@ -246,6 +246,8 @@ public:
 	soglu::Sampler mLinearInterpolationSampler;
 	soglu::Sampler mNoInterpolationSampler;
 	float mJitterStrength;
+
+	boost::filesystem::path mShaderPath;
 };
 
 

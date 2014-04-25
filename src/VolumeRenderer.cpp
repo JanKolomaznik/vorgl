@@ -1,15 +1,16 @@
 #include <GL/glew.h>
 #include <vorgl/VolumeRenderer.hpp>
 
+#include <vector>
+
 #include <glm/gtx/component_wise.hpp>
 #include <glm/gtx/verbose_operator.hpp>
 
 #include <vorgl/SliceGeneration.hpp>
 
+
 namespace vorgl
 {
-
-
 
 /*void
 applyVolumeRestrictionsOnBoundingBox(soglu::BoundingBox3D &aBBox, const VolumeRestrictions &aVolumeRestrictions )
@@ -41,7 +42,7 @@ VolumeRenderer::initialize(const boost::filesystem::path &aPath)
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	mLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER); 
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
 
@@ -49,7 +50,7 @@ VolumeRenderer::initialize(const boost::filesystem::path &aPath)
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER); 
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
 
@@ -59,19 +60,23 @@ VolumeRenderer::initialize(const boost::filesystem::path &aPath)
 void
 VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
-	boost::filesystem::path vertexShaderPath = aPath / "volume.vert.glsl";
-	boost::filesystem::path fragmentShaderPath = aPath / "volume.frag.glsl";
+	mShaderPath = aPath;
 
-	SOGLU_DEBUG_PRINT("Loading raycasting renderer shader program.");
+	boost::filesystem::path vertexShaderPath = mShaderPath / "volume.vert.glsl";
+	boost::filesystem::path fragmentShaderPath = mShaderPath / "volume.frag.glsl";
+
+	soglu::ShaderProgramSource volumeProgramSources = soglu::loadShaderProgramSource(aPath / "volume.cfg", aPath);
+
+	/*SOGLU_DEBUG_PRINT("Loading raycasting renderer shader program.");
 	mRayCastingProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(vertexShaderPath, aPath / "testvolume.frag.glsl");
-	SOGLU_DEBUG_PRINT("Raycasting renderer shader program loaded.");
+	SOGLU_DEBUG_PRINT("Raycasting renderer shader program loaded.");*/
 
 	mBasicShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "basic_vertex.glsl", aPath / "basic_fragment.glsl");
 
-	std::string vertexShaderCode = soglu::loadFile(vertexShaderPath);
+	/*std::string vertexShaderCode = soglu::loadFile(vertexShaderPath);
 	std::string fragmentShaderCode = soglu::loadFile(fragmentShaderPath);
 	auto vertexShader = std::make_shared<soglu::GLSLVertexShader>(vertexShaderCode);
-
+	*/
 	static std::unordered_map<TFFlags, std::string, Hasher<TFFlags>> tfFlagDefines = [this]() {
 			// TODO - use initializer_list (waiting for VS 2013)
 			std::unordered_map<TFFlags, std::string, Hasher<TFFlags>> defines;
@@ -83,23 +88,25 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 
 	for (int i = static_cast<int>(TFFlags::NO_FLAGS); i <= static_cast<int>(TFFlags::ALL_FLAGS); ++i) {
 		TransferFunctionRenderFlags flags(i);
-		std::string defines = "#version 150\n#define TRANSFER_FUNCTION_RENDERING\n";
+		std::string defines = "#define TRANSFER_FUNCTION_RENDERING\n";
 		for (const auto & def : tfFlagDefines) {
 			if (flags.test(def.first)) {
 				defines += def.second;
 			}
 		}
 		SOGLU_DEBUG_PRINT("Creating volume renderer shader program. Defines: \n" << defines);
-		soglu::GLSLProgram program(true);
+		mTFShaderPrograms[flags] = soglu::createShaderProgramFromSources(volumeProgramSources, defines);
+		SOGLU_DEBUG_PRINT("Shader program : " << mTFShaderPrograms[flags].id());
+		/*soglu::GLSLProgram program(true);
 		program.attachShader(vertexShader);
 		program.attachShader(std::make_shared<soglu::GLSLFragmentShader>(defines + fragmentShaderCode));
 		program.link();
-		program.validate();
+		program.validate();*/
 
-		mTFShaderPrograms[flags] = std::move(program);
+		//mTFShaderPrograms[flags] = std::move(program);
 	}
 
-	static std::unordered_map<DensityFlags, std::string, Hasher<DensityFlags>> densityFlagDefines = [this]() {
+	/*static std::unordered_map<DensityFlags, std::string, Hasher<DensityFlags>> densityFlagDefines = [this]() {
 			// TODO - use initializer_list (waiting for VS 2013)
 			std::unordered_map<DensityFlags, std::string, Hasher<DensityFlags>> defines;
 			defines[DensityFlags::JITTERING] = "#define ENABLE_JITTERING\n";
@@ -123,7 +130,7 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 		program.validate();
 
 		mDensityShaderPrograms[flags] = std::move(program);
-	}
+	}*/
 }
 
 void
@@ -160,14 +167,6 @@ void
 VolumeRenderer::finalize()
 {
 	//TODO
-}
-
-
-void
-VolumeRenderer::setupView(const soglu::Camera &aCamera, const soglu::GLViewSetup &aViewSetup)
-{
-	//mCgEffect.setParameter("gCamera", aCamera);
-	//mCgEffect.setParameter("gViewSetup", aViewSetup );
 }
 
 void
@@ -293,9 +292,13 @@ VolumeRenderer::renderAuxiliaryGeometryForRaycasting(
 
 soglu::GLSLProgram &
 VolumeRenderer::getDensityShaderProgram(
-		const DensityRenderingOptions &aDensityRenderingOptions, 
+		const DensityRenderingOptions &aDensityRenderingOptions,
 		const RenderingQuality &aRenderingQuality)
 {
+	if (!mRayCastingProgram) {
+		soglu::ShaderProgramSource densityProgramSources = soglu::loadShaderProgramSource(mShaderPath / "density_volume.cfg", mShaderPath);
+		mRayCastingProgram = soglu::createShaderProgramFromSources(densityProgramSources, "");
+	}
 	return mRayCastingProgram;
 }
 
@@ -309,7 +312,7 @@ VolumeRenderer::densityRendering(
 		)
 {
 	soglu::GLSLProgram &shaderProgram = getDensityShaderProgram(aDensityRenderingOptions, aRenderingQuality);
-	
+
 	auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
 	renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
 
@@ -318,7 +321,7 @@ VolumeRenderer::densityRendering(
 
 	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
 	auto programBinder = getBinder(shaderProgram);
-	
+
 	setVolumeRenderingViewConfiguration(shaderProgram, aViewConfiguration);
 	setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
 	setVolumeRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
@@ -375,7 +378,7 @@ VolumeRenderer::rayCasting(
 	} else {
 		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	}
-	
+
 	soglu::gl::bindTexture(soglu::TextureUnitId(5), soglu::TextureTarget::Texture2D, aDepthBuffer);
 	shaderProgram.setUniformByName("gDepthBuffer", soglu::TextureUnitId(5));
 	shaderProgram.setUniformByName("gWindowSize", glm::fvec2(aWindowSize));
