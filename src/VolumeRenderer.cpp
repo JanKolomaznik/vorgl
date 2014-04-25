@@ -40,11 +40,18 @@ VolumeRenderer::initialize(const boost::filesystem::path &aPath)
 	mLinearInterpolationSampler.initialize();
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	mLinearInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER); 
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+	mLinearInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
 
 	mNoInterpolationSampler.initialize();
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER); 
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+	mNoInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
 
 	initJitteringTexture();
 }
@@ -201,7 +208,7 @@ VolumeRenderer::setupSamplingProcess(soglu::GLSLProgram &aShaderProgram, const s
 }
 
 
-void
+/*void
 VolumeRenderer::densityRendering(
 		const soglu::Camera &aCamera,
 		const soglu::GLViewSetup &aViewSetup,
@@ -213,73 +220,113 @@ VolumeRenderer::densityRendering(
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
 		VolumeRenderer::DensityRenderFlags aFlags
+		)*/
+
+void
+setVolumeRenderingViewConfiguration(
+		soglu::GLSLProgram &aShaderProgram,
+		const VolumeRenderingConfiguration &aViewConfiguration
 		)
 {
-	soglu::GLSLProgram &shaderProgram = mDensityShaderPrograms[aFlags];
-	shaderProgram.setUniformByName("gCamera", aCamera);
-	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
-	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
-	shaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
-	shaderProgram.setUniformByName("gWLWindow", aLutWindow);
+	aShaderProgram.setUniformByName("gCamera", aViewConfiguration.camera);
+	aShaderProgram.setUniformByName("gViewSetup", aViewConfiguration.viewSetup);
+	aShaderProgram.setUniformByName("gWindowSize", glm::fvec2(aViewConfiguration.windowSize));
+
+	SOGLU_DEBUG_PRINT("----------------------------------------------------\n");
+	SOGLU_DEBUG_PRINT("AAA " << aViewConfiguration.depthBuffer.value);
+	soglu::gl::bindTexture(soglu::TextureUnitId(5), soglu::TextureTarget::Texture2D, aViewConfiguration.depthBuffer);
+	aShaderProgram.setUniformByName("gDepthBuffer", soglu::TextureUnitId(5));
+}
+
+void
+VolumeRenderer::setVolumeRenderingQuality(
+		soglu::GLSLProgram &aShaderProgram,
+		const RenderingQuality &aRenderingQuality,
+		const VolumeRenderingConfiguration &aViewConfiguration
+		)
+{
+	setupSamplingProcess(aShaderProgram, aViewConfiguration.boundingBox, aViewConfiguration.camera, aRenderingQuality.sliceCount);
+	setupJittering(aShaderProgram, mJitterStrength);
+}
+
+
+void
+VolumeRenderer::setVolumeRenderingImageData(
+		soglu::GLSLProgram &aShaderProgram,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		bool aEnableInterpolation
+		)
+{
+	aShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
+	aShaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
+
 	if (aEnableInterpolation) {
 		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	} else {
 		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	}
-	setupSamplingProcess(shaderProgram, aBoundingBox, aCamera, aSliceCount);
-	setupJittering(shaderProgram, mJitterStrength);
+}
+
+
+void
+VolumeRenderer::setDensityRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const DensityRenderingOptions &aDensityRenderingOptions
+		)
+{
+	aShaderProgram.setUniformByName("gWLWindow", aDensityRenderingOptions.lutWindow);
+}
+
+void
+VolumeRenderer::renderAuxiliaryGeometryForRaycasting(
+		const VolumeRenderingConfiguration &aViewConfiguration,
+		const ClipPlanes &aCutPlanes
+		)
+{
+		GL_CHECKED_CALL(glCullFace(GL_FRONT));
+		int vertexLocation = mBasicShaderProgram.getAttributeLocation("vertex");
+		auto programBinder = soglu::getBinder(mBasicShaderProgram);
+		setVolumeRenderingViewConfiguration(mBasicShaderProgram, aViewConfiguration);
+
+		soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aViewConfiguration.boundingBox), GL_TRIANGLE_STRIP, vertexLocation);
+}
+
+soglu::GLSLProgram &
+VolumeRenderer::getDensityShaderProgram(
+		const DensityRenderingOptions &aDensityRenderingOptions, 
+		const RenderingQuality &aRenderingQuality)
+{
+	return mRayCastingProgram;
+}
+
+void
+VolumeRenderer::densityRendering(
+		const VolumeRenderingConfiguration &aViewConfiguration,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const RenderingQuality &aRenderingQuality,
+		const ClipPlanes &aCutPlanes,
+		const DensityRenderingOptions &aDensityRenderingOptions
+		)
+{
+	soglu::GLSLProgram &shaderProgram = getDensityShaderProgram(aDensityRenderingOptions, aRenderingQuality);
+	
+	auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
+	renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
+
+	auto depth_test_disabler = soglu::disable(GL_DEPTH_TEST);
+	GL_CHECKED_CALL(glCullFace(GL_BACK));
 
 	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
 	auto programBinder = getBinder(shaderProgram);
+	
+	setVolumeRenderingViewConfiguration(shaderProgram, aViewConfiguration);
+	setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
+	setVolumeRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
+	setDensityRenderingOptions(shaderProgram, aDensityRenderingOptions);
 
-	vorgl::generateVolumeSlices(
-		aBoundingBox,
-		aCamera,
-		aSliceCount,
-		1.0f,
-		mSliceBuffers
-		);
-	soglu::drawVertexIndexBuffers(
-		mSliceBuffers,
-		GL_TRIANGLE_FAN,
-		//GL_LINE_LOOP,
-		vertexLocation
-		);
+	//shaderProgram.setUniformByName("gWindowSize", glm::fvec2(aViewConfiguration.windowSize));
 
-	/*D_PRINT("FLAGS " << aFlags);
-
-	mCgEffect.setParameter( "gPrimaryImageData3D", aImage );
-	mCgEffect.setParameter( "gMappedIntervalBands", aImage.getMappedInterval() );
-
-	setupView(aCamera, aViewSetup);
-	setupJittering(aJitterStrength);
-	setupSamplingProcess(aBoundingBox, aCamera, aSliceCount);
-
-	mCgEffect.setParameter("gEnableCutPlane", aEnableCutPlane );
-	mCgEffect.setParameter("gCutPlane", aCutPlane );
-
-	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation );
-
-
-
-	mCgEffect.setParameter("gWLWindow", aLutWindow );
-
-	std::string techniqueName = aMIP ? "WLWindowMIP_3D" : "WLWindowBasic_3D";
-
-	mCgEffect.executeTechniquePass(
-			techniqueName,
-			boost::bind( &vorgl::GLDrawVolumeSlices_Intermediate,
-				aBoundingBox,
-				aCamera,
-				aSliceCount,
-				mVertices,
-				mIndices,
-				1.0f
-				)
-			);
-
-
-	soglu::checkForGLError( "OGL error : " );*/
+	soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aViewConfiguration.boundingBox), GL_TRIANGLE_STRIP, vertexLocation);
 }
 
 
@@ -295,16 +342,28 @@ VolumeRenderer::rayCasting(
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
 		VolumeRenderer::TransferFunctionRenderFlags aFlags,
-		soglu::TextureId aDepthBuffer
+		soglu::TextureId aDepthBuffer,
+		glm::ivec2 aWindowSize
 		)
 {
+		SOGLU_DEBUG_PRINT("----------------------------------------------------\n");
+	SOGLU_DEBUG_PRINT("BBB " << aDepthBuffer.value);
+	GL_CHECKED_CALL(glEnable(GL_CULL_FACE));
+	{
+		GL_CHECKED_CALL(glCullFace(GL_FRONT));
+		int vertexLocation = mBasicShaderProgram.getAttributeLocation("vertex");
+		auto programBinder = getBinder(mBasicShaderProgram);
+		mBasicShaderProgram.setUniformByName("gCamera", aCamera);
+		mBasicShaderProgram.setUniformByName("gViewSetup", aViewSetup);
+		soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aBoundingBox), GL_TRIANGLE_STRIP, vertexLocation);
+	}
+	GL_CHECKED_CALL(glDisable(GL_DEPTH_TEST));
 	soglu::GLSLProgram &shaderProgram = mRayCastingProgram;
 	//soglu::GLSLProgram &shaderProgram = mBasicShaderProgram;
 	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
 	auto programBinder = getBinder(shaderProgram);
 
 	GL_CHECKED_CALL(glCullFace(GL_BACK));
-	GL_CHECKED_CALL(glEnable(GL_CULL_FACE));
 
 	shaderProgram.setUniformByName("gCamera", aCamera);
 	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
@@ -317,10 +376,13 @@ VolumeRenderer::rayCasting(
 		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
 	}
 	
-	shaderProgram.setUniformByName("gDepthBuffer", aDepthBuffer);
+	soglu::gl::bindTexture(soglu::TextureUnitId(5), soglu::TextureTarget::Texture2D, aDepthBuffer);
+	shaderProgram.setUniformByName("gDepthBuffer", soglu::TextureUnitId(5));
+	shaderProgram.setUniformByName("gWindowSize", glm::fvec2(aWindowSize));
 
 	soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aBoundingBox), GL_TRIANGLE_STRIP, vertexLocation);
 	GL_CHECKED_CALL(glDisable(GL_CULL_FACE));
+	GL_CHECKED_CALL(glEnable(GL_DEPTH_TEST));
 }
 
 void

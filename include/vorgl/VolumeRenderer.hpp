@@ -17,6 +17,8 @@
 
 #include <type_traits>
 
+
+
 template <typename TEnum>
 class Flags {
 public:
@@ -83,6 +85,28 @@ enum TFConfigurationFlags{
 	tfIntegral	= 1 << 2
 };
 
+struct ClipPlanes {
+
+};
+
+struct DensityRenderingOptions {
+	glm::fvec2 lutWindow;
+	//VolumeRenderer::DensityRenderFlags flags;
+};
+
+struct VolumeRenderingConfiguration {
+	const soglu::Camera &camera;
+	const soglu::GLViewSetup &viewSetup;
+	const soglu::BoundingBox3D &boundingBox;
+	const glm::ivec2 &windowSize;
+	soglu::TextureId depthBuffer;
+};
+
+struct RenderingQuality {
+	int sliceCount;
+	bool enableInterpolation;
+	bool enableJittering;
+};
 
 class VolumeRenderer
 {
@@ -134,21 +158,17 @@ public:
 		soglu::Planef aCutPlane,
 		bool aEnableInterpolation,
 		VolumeRenderer::TransferFunctionRenderFlags aFlags,
-		soglu::TextureId aDepthBuffer
+		soglu::TextureId aDepthBuffer,
+		glm::ivec2 aWindowSize
 		);
 
 	void
 	densityRendering(
-		const soglu::Camera &aCamera,
-		const soglu::GLViewSetup &aViewSetup,
+		const VolumeRenderingConfiguration &aViewConfiguration,
 		const soglu::GLTextureImageTyped<3> &aImage,
-		const soglu::BoundingBox3D &aBoundingBox,
-		glm::fvec2 aLutWindow,
-		size_t aSliceCount,
-		bool aEnableCutPlane,
-		soglu::Planef aCutPlane,
-		bool aEnableInterpolation,
-		VolumeRenderer::DensityRenderFlags aFlags
+		const RenderingQuality &aRenderingQuality,
+		const ClipPlanes &aCutPlane,
+		const DensityRenderingOptions &aDensityRenderingOptions
 		);
 
 	void
@@ -183,6 +203,37 @@ public:
 
 	void
 	loadShaders(const boost::filesystem::path &aPath);
+
+	soglu::GLSLProgram &
+	getDensityShaderProgram(
+		const DensityRenderingOptions &aDensityRenderingOptions, 
+		const RenderingQuality &aRenderingQuality);
+
+	void
+	renderAuxiliaryGeometryForRaycasting(
+		const VolumeRenderingConfiguration &aViewConfiguration,
+		const ClipPlanes &aCutPlanes
+		);
+
+	void
+	setVolumeRenderingImageData(
+		soglu::GLSLProgram &aShaderProgram,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		bool aEnableInterpolation
+		);
+
+	void
+	setVolumeRenderingQuality(
+		soglu::GLSLProgram &aShaderProgram,
+		const RenderingQuality &aRenderingQuality,
+		const VolumeRenderingConfiguration &aViewConfiguration
+		);
+
+	void
+	setDensityRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const DensityRenderingOptions &aDensityRenderingOptions
+		);
 
 	soglu::GLSLProgram mRayCastingProgram;
 	soglu::GLSLProgram mBasicShaderProgram;
