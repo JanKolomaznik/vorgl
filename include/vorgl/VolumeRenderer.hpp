@@ -18,7 +18,7 @@
 #include <type_traits>
 
 
-
+// TODO - find better place
 template <typename TEnum>
 class Flags {
 public:
@@ -94,6 +94,14 @@ struct DensityRenderingOptions {
 	//VolumeRenderer::DensityRenderFlags flags;
 };
 
+struct TransferFunctionRenderingOptions {
+	const GLTransferFunctionBuffer1D &transferFunction;
+	glm::fvec3 lightPosition;
+	bool enableLight;
+	bool preintegratedTransferFunction;
+	//VolumeRenderer::TransferFunctionRenderFlags flags;
+};
+
 struct VolumeRenderingConfiguration {
 	const soglu::Camera &camera;
 	const soglu::GLViewSetup &viewSetup;
@@ -107,6 +115,28 @@ struct RenderingQuality {
 	bool enableInterpolation;
 	bool enableJittering;
 };
+} // namespace vorgl
+
+namespace std {
+// TODO - find better place
+/*template <typename TFirst, typename TSecond>
+struct hash<std::pair<TFirst, TSecond>
+{
+	typedef size_t result_type;
+	typedef std::pair<TFirst, TSecond> argument_type;
+	size_t
+	operator()(const argument_type &aValue) const
+	{
+		return firstHash(aValue.first) ^ secondHash(aValue.second);
+	}
+
+	std::hash<TFirst> firstHash;
+	std::hash<TSecond> secondHash;
+};*/
+
+} // namespace std
+
+namespace vorgl {
 
 class VolumeRenderer
 {
@@ -173,17 +203,11 @@ public:
 
 	void
 	transferFunctionRendering(
-		const soglu::Camera &aCamera,
-		const soglu::GLViewSetup &aViewSetup,
+		const VolumeRenderingConfiguration &aViewConfiguration,
 		const soglu::GLTextureImageTyped<3> &aImage,
-		const soglu::BoundingBox3D &aBoundingBox,
-		const GLTransferFunctionBuffer1D &aTransferFunction,
-		int aSliceCount,
-		bool aEnableCutPlane,
-		soglu::Planef aCutPlane,
-		bool aEnableInterpolation,
-		glm::fvec3 aLightPosition,
-		VolumeRenderer::TransferFunctionRenderFlags aFlags
+		const RenderingQuality &aRenderingQuality,
+		const ClipPlanes &aCutPlanes,
+		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
 		);
 
 	void
@@ -205,9 +229,15 @@ public:
 	loadShaders(const boost::filesystem::path &aPath);
 
 	soglu::GLSLProgram &
-	getDensityShaderProgram(
-		const DensityRenderingOptions &aDensityRenderingOptions, 
+	getShaderProgram(
+		const DensityRenderingOptions &aDensityRenderingOptions,
 		const RenderingQuality &aRenderingQuality);
+
+	soglu::GLSLProgram &
+	getShaderProgram(
+		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions,
+		const RenderingQuality &aRenderingQuality);
+
 
 	void
 	renderAuxiliaryGeometryForRaycasting(
@@ -230,15 +260,31 @@ public:
 		);
 
 	void
-	setDensityRenderingOptions(
+	setRenderingOptions(
 		soglu::GLSLProgram &aShaderProgram,
 		const DensityRenderingOptions &aDensityRenderingOptions
+		);
+
+	void
+	setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
+		);
+
+	template<typename TRenderingOptions>
+	void
+	renderVolume(
+		const VolumeRenderingConfiguration &aViewConfiguration,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const RenderingQuality &aRenderingQuality,
+		const ClipPlanes &aCutPlanes,
+		const TRenderingOptions &aRenderingOptions
 		);
 
 	soglu::GLSLProgram mRayCastingProgram;
 	soglu::GLSLProgram mBasicShaderProgram;
 
-	std::unordered_map<TransferFunctionRenderFlags, soglu::GLSLProgram, Hasher<TFFlags>> mTFShaderPrograms;
+	std::unordered_map<std::string, soglu::GLSLProgram> mTFShaderPrograms;
 	std::unordered_map<DensityRenderFlags, soglu::GLSLProgram, Hasher<DensityFlags>> mDensityShaderPrograms;
 	soglu::TextureId mNoiseMap;
 	soglu::VertexIndexBuffers mSliceBuffers;
