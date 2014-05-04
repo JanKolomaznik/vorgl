@@ -228,8 +228,6 @@ setVolumeRenderingViewConfiguration(
 	aShaderProgram.setUniformByName("gViewSetup", aViewConfiguration.viewSetup);
 	aShaderProgram.setUniformByName("gWindowSize", glm::fvec2(aViewConfiguration.windowSize));
 
-	SOGLU_DEBUG_PRINT("----------------------------------------------------\n");
-	SOGLU_DEBUG_PRINT("AAA " << aViewConfiguration.depthBuffer.value);
 	soglu::gl::bindTexture(soglu::TextureUnitId(5), soglu::TextureTarget::Texture2D, aViewConfiguration.depthBuffer);
 	aShaderProgram.setUniformByName("gDepthBuffer", soglu::TextureUnitId(5));
 }
@@ -307,6 +305,21 @@ VolumeRenderer::getShaderProgram(
 		const DensityRenderingOptions &aDensityRenderingOptions,
 		const RenderingQuality &aRenderingQuality)
 {
+	std::string defines = "#define TRANSFER_FUNCTION_RENDERING\n";
+	if (aRenderingQuality.enableJittering) {
+		defines += "#define ENABLE_JITTERING\n";
+	}
+
+	if (aDensityRenderingOptions.enableMIP) {
+		defines += "#define ENABLE_MIP\n";
+	}
+
+	if (!mDensityShaderPrograms[defines]) {
+		soglu::ShaderProgramSource densityProgramSources = soglu::loadShaderProgramSource(mShaderPath / "density_volume.cfg", mShaderPath);
+		mDensityShaderPrograms[defines] = soglu::createShaderProgramFromSources(densityProgramSources, defines);
+	}
+	return mDensityShaderPrograms[defines];
+
 	if (!mRayCastingProgram) {
 		soglu::ShaderProgramSource densityProgramSources = soglu::loadShaderProgramSource(mShaderPath / "density_volume.cfg", mShaderPath);
 		mRayCastingProgram = soglu::createShaderProgramFromSources(densityProgramSources, "");
@@ -417,8 +430,6 @@ VolumeRenderer::rayCasting(
 		glm::ivec2 aWindowSize
 		)
 {
-		SOGLU_DEBUG_PRINT("----------------------------------------------------\n");
-	SOGLU_DEBUG_PRINT("BBB " << aDepthBuffer.value);
 	GL_CHECKED_CALL(glEnable(GL_CULL_FACE));
 	{
 		GL_CHECKED_CALL(glCullFace(GL_FRONT));

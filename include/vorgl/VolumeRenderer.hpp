@@ -91,6 +91,7 @@ struct ClipPlanes {
 
 struct DensityRenderingOptions {
 	glm::fvec2 lutWindow;
+	bool enableMIP;
 	//VolumeRenderer::DensityRenderFlags flags;
 };
 
@@ -285,7 +286,7 @@ public:
 	soglu::GLSLProgram mBasicShaderProgram;
 
 	std::unordered_map<std::string, soglu::GLSLProgram> mTFShaderPrograms;
-	std::unordered_map<DensityRenderFlags, soglu::GLSLProgram, Hasher<DensityFlags>> mDensityShaderPrograms;
+	std::unordered_map<std::string, soglu::GLSLProgram> mDensityShaderPrograms;
 	soglu::TextureId mNoiseMap;
 	soglu::VertexIndexBuffers mSliceBuffers;
 
