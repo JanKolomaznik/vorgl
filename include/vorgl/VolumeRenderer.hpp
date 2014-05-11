@@ -96,7 +96,9 @@ struct DensityRenderingOptions {
 };
 
 struct TransferFunctionRenderingOptions {
-	const GLTransferFunctionBuffer1D &transferFunction;
+	//const GLTransferFunctionBuffer1D &transferFunction;
+	vorgl::GLTransferFunctionBuffer1D::ConstWPtr	transferFunction;
+	vorgl::GLTransferFunctionBuffer1D::ConstWPtr	integralTransferFunction;
 	glm::fvec3 lightPosition;
 	bool enableLight;
 	bool preintegratedTransferFunction;
@@ -104,18 +106,26 @@ struct TransferFunctionRenderingOptions {
 };
 
 struct VolumeRenderingConfiguration {
-	const soglu::Camera &camera;
-	const soglu::GLViewSetup &viewSetup;
-	const soglu::BoundingBox3D &boundingBox;
-	const glm::ivec2 &windowSize;
+	soglu::Camera camera;
+	soglu::GLViewSetup viewSetup;
+	soglu::BoundingBox3D boundingBox;
+	glm::ivec2 windowSize;
 	soglu::TextureId depthBuffer;
+};
+
+struct IsoSurfaceRenderingOptions {
+	float isoValue;
 };
 
 struct RenderingQuality {
 	int sliceCount;
 	bool enableInterpolation;
 	bool enableJittering;
+	float jitterStrength;
 };
+
+struct VorglError : soglu::GLException {};
+
 } // namespace vorgl
 
 namespace std {
@@ -178,22 +188,6 @@ public:
 	finalize();
 
 	void
-	rayCasting(
-		const soglu::Camera &aCamera,
-		const soglu::GLViewSetup &aViewSetup,
-		const soglu::GLTextureImageTyped<3> &aImage,
-		const soglu::BoundingBox3D &aBoundingBox,
-		glm::fvec2 aLutWindow,
-		size_t aSliceCount,
-		bool aEnableCutPlane,
-		soglu::Planef aCutPlane,
-		bool aEnableInterpolation,
-		VolumeRenderer::TransferFunctionRenderFlags aFlags,
-		soglu::TextureId aDepthBuffer,
-		glm::ivec2 aWindowSize
-		);
-
-	void
 	densityRendering(
 		const VolumeRenderingConfiguration &aViewConfiguration,
 		const soglu::GLTextureImageTyped<3> &aImage,
@@ -211,6 +205,16 @@ public:
 		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
 		);
 
+	void
+	isosurfaceRendering(
+		const VolumeRenderingConfiguration &aViewConfiguration,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const RenderingQuality &aRenderingQuality,
+		const ClipPlanes &aCutPlanes,
+		const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
+		);
+
+protected:
 	void
 	setupJittering(soglu::GLSLProgram &aShaderProgram, float aJitterStrength);
 
@@ -237,6 +241,11 @@ public:
 	soglu::GLSLProgram &
 	getShaderProgram(
 		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions,
+		const RenderingQuality &aRenderingQuality);
+
+	soglu::GLSLProgram &
+	getShaderProgram(
+		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions,
 		const RenderingQuality &aRenderingQuality);
 
 
@@ -272,6 +281,12 @@ public:
 		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
 		);
 
+	void
+	setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions
+		);
+
 	template<typename TRenderingOptions>
 	void
 	renderVolume(
@@ -287,6 +302,10 @@ public:
 
 	std::unordered_map<std::string, soglu::GLSLProgram> mTFShaderPrograms;
 	std::unordered_map<std::string, soglu::GLSLProgram> mDensityShaderPrograms;
+	//std::unordered_map<std::string, soglu::GLSLProgram> mIsoSurfaceShaderPrograms;
+	soglu::GLSLProgram mIsoSurfaceShaderProgram;
+
+
 	soglu::TextureId mNoiseMap;
 	soglu::VertexIndexBuffers mSliceBuffers;
 

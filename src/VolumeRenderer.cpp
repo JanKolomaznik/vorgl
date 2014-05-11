@@ -77,57 +77,6 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 
 	mTFShaderPrograms.clear();
 	mDensityShaderPrograms.clear();
-	/*std::string vertexShaderCode = soglu::loadFile(vertexShaderPath);
-	std::string fragmentShaderCode = soglu::loadFile(fragmentShaderPath);
-	auto vertexShader = std::make_shared<soglu::GLSLVertexShader>(vertexShaderCode);
-	*/
-	/*static std::unordered_map<TFFlags, std::string, Hasher<TFFlags>> tfFlagDefines = [this]() {
-			// TODO - use initializer_list (waiting for VS 2013)
-			std::unordered_map<TFFlags, std::string, Hasher<TFFlags>> defines;
-			defines[TFFlags::JITTERING] = "#define ENABLE_JITTERING\n";
-			defines[TFFlags::SHADING] = "#define ENABLE_SHADING\n";
-			defines[TFFlags::PREINTEGRATED_TF] = "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
-			return defines;
-		} ();
-
-	for (int i = static_cast<int>(TFFlags::NO_FLAGS); i <= static_cast<int>(TFFlags::ALL_FLAGS); ++i) {
-		TransferFunctionRenderFlags flags(i);
-		std::string defines = "#define TRANSFER_FUNCTION_RENDERING\n";
-		for (const auto & def : tfFlagDefines) {
-			if (flags.test(def.first)) {
-				defines += def.second;
-			}
-		}
-		SOGLU_DEBUG_PRINT("Creating volume renderer shader program. Defines: \n" << defines);
-		mTFShaderPrograms[flags] = soglu::createShaderProgramFromSources(volumeProgramSources, defines);
-		SOGLU_DEBUG_PRINT("Shader program : " << mTFShaderPrograms[flags].id());
-	}*/
-
-	/*static std::unordered_map<DensityFlags, std::string, Hasher<DensityFlags>> densityFlagDefines = [this]() {
-			// TODO - use initializer_list (waiting for VS 2013)
-			std::unordered_map<DensityFlags, std::string, Hasher<DensityFlags>> defines;
-			defines[DensityFlags::JITTERING] = "#define ENABLE_JITTERING\n";
-			defines[DensityFlags::MIP] = "";
-			return defines;
-		} ();
-
-	for (int i = static_cast<int>(DensityFlags::NO_FLAGS); i <= static_cast<int>(DensityFlags::ALL_FLAGS); ++i) {
-		DensityRenderFlags flags(i);
-		std::string defines = "#version 150\n#define DENSITY_RENDERING\n";
-		for (const auto & def : densityFlagDefines) {
-			if (flags.test(def.first)) {
-				defines += def.second;
-			}
-		}
-		SOGLU_DEBUG_PRINT("Creating density volume renderer shader program. Defines: \n" << defines);
-		soglu::GLSLProgram program(true);
-		program.attachShader(vertexShader);
-		program.attachShader(std::make_shared<soglu::GLSLFragmentShader>(defines + fragmentShaderCode));
-		program.link();
-		program.validate();
-
-		mDensityShaderPrograms[flags] = std::move(program);
-	}*/
 }
 
 void
@@ -203,21 +152,6 @@ VolumeRenderer::setupSamplingProcess(soglu::GLSLProgram &aShaderProgram, const s
 	aShaderProgram.setUniformByName("gRenderingSliceThickness", renderingSliceThickness);
 }
 
-
-/*void
-VolumeRenderer::densityRendering(
-		const soglu::Camera &aCamera,
-		const soglu::GLViewSetup &aViewSetup,
-		const soglu::GLTextureImageTyped<3> &aImage,
-		const soglu::BoundingBox3D &aBoundingBox,
-		glm::fvec2 aLutWindow,
-		size_t aSliceCount,
-		bool aEnableCutPlane,
-		soglu::Planef aCutPlane,
-		bool aEnableInterpolation,
-		VolumeRenderer::DensityRenderFlags aFlags
-		)*/
-
 void
 setVolumeRenderingViewConfiguration(
 		soglu::GLSLProgram &aShaderProgram,
@@ -278,7 +212,25 @@ VolumeRenderer::setRenderingOptions(
 	)
 {
 	setupLights(aShaderProgram, aTransferFunctionRenderingOptions.lightPosition);
-	setUniform(aShaderProgram, "gTransferFunction1D", aTransferFunctionRenderingOptions.transferFunction, soglu::TextureUnitId(cTransferFunctionTextureUnit));
+	vorgl::GLTransferFunctionBuffer1D::ConstPtr tf;
+	if (aTransferFunctionRenderingOptions.preintegratedTransferFunction) {
+		tf = aTransferFunctionRenderingOptions.integralTransferFunction.lock();
+	} else {
+		tf = aTransferFunctionRenderingOptions.transferFunction.lock();
+	}
+	if (!tf) {
+		SOGLU_THROW(VorglError());
+	}
+	setUniform(aShaderProgram, "gTransferFunction1D", *tf, soglu::TextureUnitId(cTransferFunctionTextureUnit));
+}
+
+void
+VolumeRenderer::setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
+		)
+{
+	//aShaderProgram.setUniformByName("gWLWindow", aDensityRenderingOptions.lutWindow);
 }
 
 void
@@ -352,6 +304,14 @@ VolumeRenderer::getShaderProgram(
 	return mTFShaderPrograms[defines];
 }
 
+soglu::GLSLProgram &
+VolumeRenderer::getShaderProgram(
+		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions,
+		const RenderingQuality &aRenderingQuality)
+{
+	return mIsoSurfaceShaderProgram;
+}
+
 template<typename TRenderingOptions>
 void
 VolumeRenderer::renderVolume(
@@ -392,95 +352,8 @@ VolumeRenderer::densityRendering(
 		)
 {
 	renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aDensityRenderingOptions);
-
-	/*soglu::GLSLProgram &shaderProgram = getShaderProgram(aDensityRenderingOptions, aRenderingQuality);
-
-	auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
-	renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
-
-	auto depth_test_disabler = soglu::disable(GL_DEPTH_TEST);
-	GL_CHECKED_CALL(glCullFace(GL_BACK));
-
-	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
-	auto programBinder = getBinder(shaderProgram);
-
-	setVolumeRenderingViewConfiguration(shaderProgram, aViewConfiguration);
-	setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
-	setVolumeRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
-
-	setDensityRenderingOptions(shaderProgram, aDensityRenderingOptions);
-
-	soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aViewConfiguration.boundingBox), GL_TRIANGLE_STRIP, vertexLocation);*/
 }
 
-
-void
-VolumeRenderer::rayCasting(
-		const soglu::Camera &aCamera,
-		const soglu::GLViewSetup &aViewSetup,
-		const soglu::GLTextureImageTyped<3> &aImage,
-		const soglu::BoundingBox3D &aBoundingBox,
-		glm::fvec2 aLutWindow,
-		size_t aSliceCount,
-		bool aEnableCutPlane,
-		soglu::Planef aCutPlane,
-		bool aEnableInterpolation,
-		VolumeRenderer::TransferFunctionRenderFlags aFlags,
-		soglu::TextureId aDepthBuffer,
-		glm::ivec2 aWindowSize
-		)
-{
-	GL_CHECKED_CALL(glEnable(GL_CULL_FACE));
-	{
-		GL_CHECKED_CALL(glCullFace(GL_FRONT));
-		int vertexLocation = mBasicShaderProgram.getAttributeLocation("vertex");
-		auto programBinder = getBinder(mBasicShaderProgram);
-		mBasicShaderProgram.setUniformByName("gCamera", aCamera);
-		mBasicShaderProgram.setUniformByName("gViewSetup", aViewSetup);
-		soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aBoundingBox), GL_TRIANGLE_STRIP, vertexLocation);
-	}
-	GL_CHECKED_CALL(glDisable(GL_DEPTH_TEST));
-	soglu::GLSLProgram &shaderProgram = mRayCastingProgram;
-	//soglu::GLSLProgram &shaderProgram = mBasicShaderProgram;
-	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
-	auto programBinder = getBinder(shaderProgram);
-
-	GL_CHECKED_CALL(glCullFace(GL_BACK));
-
-	shaderProgram.setUniformByName("gCamera", aCamera);
-	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
-	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
-	shaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
-	shaderProgram.setUniformByName("gWLWindow", aLutWindow);
-	if (aEnableInterpolation) {
-		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
-	} else {
-		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
-	}
-
-	soglu::gl::bindTexture(soglu::TextureUnitId(5), soglu::TextureTarget::Texture2D, aDepthBuffer);
-	shaderProgram.setUniformByName("gDepthBuffer", soglu::TextureUnitId(5));
-	shaderProgram.setUniformByName("gWindowSize", glm::fvec2(aWindowSize));
-
-	soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aBoundingBox), GL_TRIANGLE_STRIP, vertexLocation);
-	GL_CHECKED_CALL(glDisable(GL_CULL_FACE));
-	GL_CHECKED_CALL(glEnable(GL_DEPTH_TEST));
-}
-
-/*void
-VolumeRenderer::transferFunctionRendering(
-	const soglu::Camera &aCamera,
-	const soglu::GLViewSetup &aViewSetup,
-	const soglu::GLTextureImageTyped<3> &aImage,
-	const soglu::BoundingBox3D &aBoundingBox,
-	const GLTransferFunctionBuffer1D &aTransferFunction,
-	int aSliceCount,
-	bool aEnableCutPlane,
-	soglu::Planef aCutPlane,
-	bool aEnableInterpolation,
-	glm::fvec3 aLightPosition,
-	VolumeRenderer::TransferFunctionRenderFlags aFlags
-	)*/
 void
 VolumeRenderer::transferFunctionRendering(
 	const VolumeRenderingConfiguration &aViewConfiguration,
@@ -491,59 +364,18 @@ VolumeRenderer::transferFunctionRendering(
 	)
 {
 	renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aTransferFunctionRenderingOptions);
-	/*soglu::GLSLProgram &shaderProgram = getShaderProgram(aTransferFunctionRenderingOptions, aRenderingQuality);
+}
 
-	auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
-	renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
-
-	auto depth_test_disabler = soglu::disable(GL_DEPTH_TEST);
-	GL_CHECKED_CALL(glCullFace(GL_BACK));
-
-	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
-	auto programBinder = getBinder(shaderProgram);
-
-	setVolumeRenderingViewConfiguration(shaderProgram, aViewConfiguration);
-	setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
-	setVolumeRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
-
-	setTransferFunctionRenderingOptions(shaderProgram, aTransferFunctionRenderingOptions);
-
-	soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aViewConfiguration.boundingBox), GL_TRIANGLE_STRIP, vertexLocation);
-*/
-	/*
-	soglu::GLSLProgram &shaderProgram = mTFShaderPrograms[aFlags];
-	shaderProgram.setUniformByName("gCamera", aCamera);
-	shaderProgram.setUniformByName("gViewSetup", aViewSetup);
-	shaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
-	shaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
-	if (aEnableInterpolation) {
-		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
-	} else {
-		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
-	}
-
-	setupSamplingProcess(shaderProgram, aBoundingBox, aCamera, aSliceCount);
-	setupJittering(shaderProgram, mJitterStrength);
-	setupLights(shaderProgram, aLightPosition);
-
-	setUniform(shaderProgram, "gTransferFunction1D", aTransferFunction, soglu::TextureUnitId(cTransferFunctionTextureUnit));
-
-	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
-	auto programBinder = getBinder(shaderProgram);
-
-	vorgl::generateVolumeSlices(
-		aBoundingBox,
-		aCamera,
-		aSliceCount,
-		1.0f,
-		mSliceBuffers
-		);
-	soglu::drawVertexIndexBuffers(
-		mSliceBuffers,
-		GL_TRIANGLE_FAN,
-		//GL_LINE_LOOP,
-		vertexLocation
-		);*/
+void
+VolumeRenderer::isosurfaceRendering(
+	const VolumeRenderingConfiguration &aViewConfiguration,
+	const soglu::GLTextureImageTyped<3> &aImage,
+	const RenderingQuality &aRenderingQuality,
+	const ClipPlanes &aCutPlanes,
+	const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
+	)
+{
+	renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aIsoSurfaceRenderingOptions);
 }
 
 
