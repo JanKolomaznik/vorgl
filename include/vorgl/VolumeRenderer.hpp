@@ -172,6 +172,7 @@ public:
 	};
 
 	enum {
+		cDepthBufferTextureUnit = 9,
 		cJitteringTextureUnit = 10,
 		cTransferFunctionTextureUnit = 11,
 		cData1TextureUnit = 12,
@@ -262,6 +263,11 @@ protected:
 		bool aEnableInterpolation
 		);
 
+	void
+	setVolumeRenderingViewConfiguration(
+		soglu::GLSLProgram &aShaderProgram,
+		const VolumeRenderingConfiguration &aViewConfiguration
+		);
 	void
 	setVolumeRenderingQuality(
 		soglu::GLSLProgram &aShaderProgram,

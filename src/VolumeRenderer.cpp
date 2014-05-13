@@ -153,7 +153,7 @@ VolumeRenderer::setupSamplingProcess(soglu::GLSLProgram &aShaderProgram, const s
 }
 
 void
-setVolumeRenderingViewConfiguration(
+VolumeRenderer::setVolumeRenderingViewConfiguration(
 		soglu::GLSLProgram &aShaderProgram,
 		const VolumeRenderingConfiguration &aViewConfiguration
 		)
@@ -162,8 +162,8 @@ setVolumeRenderingViewConfiguration(
 	aShaderProgram.setUniformByName("gViewSetup", aViewConfiguration.viewSetup);
 	aShaderProgram.setUniformByName("gWindowSize", glm::fvec2(aViewConfiguration.windowSize));
 
-	soglu::gl::bindTexture(soglu::TextureUnitId(5), soglu::TextureTarget::Texture2D, aViewConfiguration.depthBuffer);
-	aShaderProgram.setUniformByName("gDepthBuffer", soglu::TextureUnitId(5));
+	soglu::gl::bindTexture(soglu::TextureUnitId(cDepthBufferTextureUnit), soglu::TextureTarget::Texture2D, aViewConfiguration.depthBuffer);
+	aShaderProgram.setUniformByName("gDepthBuffer", soglu::TextureUnitId(cDepthBufferTextureUnit));
 }
 
 void
@@ -230,7 +230,8 @@ VolumeRenderer::setRenderingOptions(
 		const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
 		)
 {
-	//aShaderProgram.setUniformByName("gWLWindow", aDensityRenderingOptions.lutWindow);
+	aShaderProgram.setUniformByName("gIsoValue", aIsoSurfaceRenderingOptions.isoValue);
+	aShaderProgram.setUniformByName("gSurfaceColor", glm::vec4(0.0, 1.0, 0.0, 1.0));
 }
 
 void
@@ -309,6 +310,11 @@ VolumeRenderer::getShaderProgram(
 		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions,
 		const RenderingQuality &aRenderingQuality)
 {
+	if (!mIsoSurfaceShaderProgram) {
+		std::string defines;
+		soglu::ShaderProgramSource isoSurfaceProgramSources = soglu::loadShaderProgramSource(mShaderPath / "iso_surface_volume.cfg", mShaderPath);
+		mIsoSurfaceShaderProgram = soglu::createShaderProgramFromSources(isoSurfaceProgramSources, defines);
+	}
 	return mIsoSurfaceShaderProgram;
 }
 
