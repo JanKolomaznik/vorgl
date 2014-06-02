@@ -89,18 +89,21 @@ struct ClipPlanes {
 
 };
 
+struct LightConfiguration {
+	glm::fvec3 lightPosition;
+	bool enableLight;
+};
+
 struct DensityRenderingOptions {
 	glm::fvec2 lutWindow;
 	bool enableMIP;
 	//VolumeRenderer::DensityRenderFlags flags;
 };
 
-struct TransferFunctionRenderingOptions {
+struct TransferFunctionRenderingOptions : LightConfiguration {
 	//const GLTransferFunctionBuffer1D &transferFunction;
 	vorgl::GLTransferFunctionBuffer1D::ConstWPtr	transferFunction;
 	vorgl::GLTransferFunctionBuffer1D::ConstWPtr	integralTransferFunction;
-	glm::fvec3 lightPosition;
-	bool enableLight;
 	bool preintegratedTransferFunction;
 	//VolumeRenderer::TransferFunctionRenderFlags flags;
 };
@@ -113,7 +116,7 @@ struct VolumeRenderingConfiguration {
 	soglu::TextureId depthBuffer;
 };
 
-struct IsoSurfaceRenderingOptions {
+struct IsoSurfaceRenderingOptions : LightConfiguration {
 	float isoValue;
 };
 

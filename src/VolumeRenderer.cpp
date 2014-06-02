@@ -77,6 +77,7 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 
 	mTFShaderPrograms.clear();
 	mDensityShaderPrograms.clear();
+	mIsoSurfaceShaderProgram.finalize();
 }
 
 void
@@ -230,6 +231,7 @@ VolumeRenderer::setRenderingOptions(
 		const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
 		)
 {
+	setupLights(aShaderProgram, aIsoSurfaceRenderingOptions.lightPosition);
 	aShaderProgram.setUniformByName("gIsoValue", aIsoSurfaceRenderingOptions.isoValue);
 	aShaderProgram.setUniformByName("gSurfaceColor", glm::vec4(0.0, 1.0, 0.0, 1.0));
 }

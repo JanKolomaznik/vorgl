@@ -15,7 +15,7 @@
 
 #include <GL/gl.h>
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_precision.hpp>
 
@@ -72,7 +72,7 @@ struct RGBAf
 class TransferFunctionBuffer1D: public std::vector<RGBAf>
 {
 public:
-	typedef boost::shared_ptr< TransferFunctionBuffer1D > Ptr;
+	typedef std::shared_ptr< TransferFunctionBuffer1D > Ptr;
 
 	typedef RGBAf 			ValueType;
 	typedef std::vector<ValueType>	Buffer;
@@ -156,10 +156,10 @@ private:
 struct GLTransferFunctionBuffer1D
 {
 	typedef glm::fvec2 MappedInterval;
-	typedef boost::shared_ptr< GLTransferFunctionBuffer1D > Ptr;
-	typedef boost::shared_ptr< const GLTransferFunctionBuffer1D > ConstPtr;
-	typedef boost::weak_ptr< GLTransferFunctionBuffer1D > WPtr;
-	typedef boost::weak_ptr< const GLTransferFunctionBuffer1D > ConstWPtr;
+	typedef std::shared_ptr< GLTransferFunctionBuffer1D > Ptr;
+	typedef std::shared_ptr< const GLTransferFunctionBuffer1D > ConstPtr;
+	typedef std::weak_ptr< GLTransferFunctionBuffer1D > WPtr;
+	typedef std::weak_ptr< const GLTransferFunctionBuffer1D > ConstWPtr;
 
 	~GLTransferFunctionBuffer1D()
 	{
