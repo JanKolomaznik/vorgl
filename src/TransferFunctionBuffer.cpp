@@ -1,6 +1,5 @@
 #include <GL/glew.h>
 #include <vorgl/TransferFunctionBuffer.hpp>
-#include <soglu/CgFXShader.hpp>
 #include <soglu/TextureUtils.hpp>
 #include <soglu/ErrorHandling.hpp>
 #include <cmath>
@@ -101,18 +100,5 @@ createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFuncti
 	//return GLTransferFunctionBuffer1D::Ptr()
 }
 
-
-void
-setCgFXParameter(CGeffect &aEffect, std::string aName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction)
-{
-	//TODO
-	{
-		CGparameter cgParameter = cgGetNamedEffectParameter(aEffect, (aName + ".data").c_str());
-		cgGLSetupSampler( cgParameter, aTransferFunction.getTextureID() );
-	}
-	soglu::detail::setCgFXParameter(aEffect, aName + ".interval", aTransferFunction.getMappedInterval() );
-
-	soglu::detail::setCgFXParameter(aEffect, aName + ".sampleCount", aTransferFunction.getSampleCount() );
-}
 
 } /*vorgl*/

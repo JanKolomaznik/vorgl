@@ -3,7 +3,6 @@
 #include <soglu/BoundingBox.hpp>
 #include <soglu/Primitives.hpp>
 #include <soglu/GLTextureImage.hpp>
-#include <soglu/CgFXShader.hpp>
 #include <soglu/GLViewSetup.hpp>
 #include <soglu/utils.hpp>
 //#include <soglu/OGLTools.hpp>
@@ -59,7 +58,7 @@ public:
 
 	void
 	loadShaders(const boost::filesystem::path &aPath);
-	
+
 protected:
 	soglu::GLSLProgram mShaderProgram;
 	soglu::Sampler mLinearInterpolationSampler;

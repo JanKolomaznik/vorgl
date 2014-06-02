@@ -19,7 +19,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_precision.hpp>
 
-#include <soglu/CgFXShader.hpp>
 #include <soglu/GLSLShader.hpp>
 
 #include <cassert>
@@ -212,8 +211,6 @@ struct TransferFunctionBufferInfo
 	vorgl::TransferFunctionBuffer1D::Ptr tfIntegralBuffer;
 };
 
-void
-setCgFXParameter(CGeffect &aEffect, std::string aName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction);
 
 inline void
 setUniform(soglu::GLSLProgram &aProgram, const std::string &aUniformName, const vorgl::GLTransferFunctionBuffer1D &aTransferFunction, soglu::TextureUnitId aTextureUnit)
