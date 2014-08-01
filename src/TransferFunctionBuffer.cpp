@@ -43,7 +43,7 @@ TransferFunctionBuffer1D::GetNearestIndex( float aValue )const
 }
 
 void
-TransferFunctionBuffer1D::SetMappedInterval( TransferFunctionBuffer1D::MappedInterval aMappedInterval )
+TransferFunctionBuffer1D::setMappedInterval( TransferFunctionBuffer1D::MappedInterval aMappedInterval )
 {
 	mMappedInterval = aMappedInterval;
 }

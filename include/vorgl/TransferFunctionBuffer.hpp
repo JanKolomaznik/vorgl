@@ -142,7 +142,7 @@ public:
 	}*/
 
 	void
-	SetMappedInterval( MappedInterval aMappedInterval );
+	setMappedInterval( MappedInterval aMappedInterval );
 protected:
 	//std::vector<RGBAf> mBuffer;
 	MappedInterval mMappedInterval;
@@ -200,7 +200,7 @@ struct TransferFunctionBufferInfo
 	/*TransferFunctionBufferInfo( M4D::Common::IDNumber aId, M4D::GUI::GLTransferFunctionBuffer1D::Ptr aTfGLBuffer, M4D::GUI::TransferFunctionBuffer1D::Ptr aTfBuffer ):
 		id(aId), tfGLBuffer( aTfGLBuffer ), tfBuffer( aTfBuffer )
 	{ }*/
-	TransferFunctionBufferInfo():id(0)
+	TransferFunctionBufferInfo():id(-1)
 	{ }
 
 	/*M4D::Common::IDNumber*/int id;
