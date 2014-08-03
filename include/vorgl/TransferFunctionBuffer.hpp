@@ -65,8 +65,15 @@ struct RGBAf
 		return RGBAf(r+aArg.r, g+aArg.g, b+aArg.b, a+aArg.a);
 	}
 
+	
 	float r, g, b, a;
 };
+
+inline RGBAf operator*(const RGBAf &aArg, float aMultiplier)
+{
+	return RGBAf(aMultiplier * aArg.r, aMultiplier * aArg.g, aMultiplier * aArg.b, aMultiplier * aArg.a);
+}
+
 
 class TransferFunctionBuffer1D: public std::vector<RGBAf>
 {
