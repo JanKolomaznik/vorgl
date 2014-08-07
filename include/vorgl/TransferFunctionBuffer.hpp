@@ -65,7 +65,7 @@ struct RGBAf
 		return RGBAf(r+aArg.r, g+aArg.g, b+aArg.b, a+aArg.a);
 	}
 
-	
+
 	float r, g, b, a;
 };
 
@@ -150,6 +150,12 @@ public:
 
 	void
 	setMappedInterval( MappedInterval aMappedInterval );
+
+	MappedInterval
+	mappedInterval() const
+	{
+		return mMappedInterval;
+	}
 protected:
 	//std::vector<RGBAf> mBuffer;
 	MappedInterval mMappedInterval;
