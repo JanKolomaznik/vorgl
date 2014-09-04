@@ -33,6 +33,9 @@ struct RGBAf
 	RGBAf(float aR, float aG, float aB, float aA): r(aR), g(aG), b(aB), a(aA)
 	{}
 
+	RGBAf(const float *aBuffer): r(aBuffer[0]), g(aBuffer[1]), b(aBuffer[2]), a(aBuffer[3])
+	{}
+
 	template< size_t tCoord >
 	struct ValueAccessor
 	{
@@ -100,27 +103,6 @@ public:
 	~TransferFunctionBuffer1D()
 	{ /*empty*/ }
 
-
-	/*Iterator
-	begin();
-
-	Iterator
-	end();
-
-	ConstIterator
-	begin()const;
-
-	ConstIterator
-	end()const;
-
-	size_t
-	size()const
-	{ return mBuffer.size(); }
-
-	void
-	resize(size_t aSize)
-	{ mBuffer.resize(); }*/
-
 	MappedInterval
 	getMappedInterval()const
 	{ return mMappedInterval; }
@@ -133,20 +115,6 @@ public:
 
 	int
 	GetNearestIndex( float aValue )const;
-
-	/*ValueType &
-	operator[]( size_t aIdx )
-	{
-		assert( aIdx < mSize );
-		return mBuffer[ aIdx ];
-	}
-
-	ValueType
-	operator[]( size_t aIdx ) const
-	{
-		assert( aIdx < mBuffer.size() );
-		return mBuffer[ aIdx ];
-	}*/
 
 	void
 	setMappedInterval( MappedInterval aMappedInterval );
@@ -175,8 +143,8 @@ struct GLTransferFunctionBuffer1D
 
 	~GLTransferFunctionBuffer1D()
 	{
-		assert(soglu::isGLContextActive());
-		glDeleteTextures(1, &(mGLTextureID.value));
+		/*assert(soglu::isGLContextActive());
+		glDeleteTextures(1, &(mGLTextureID.value));*/
 		//OpenGLManager::getInstance()->deleteTextures( mGLTextureID );
 	}
 
@@ -188,7 +156,7 @@ struct GLTransferFunctionBuffer1D
 
 	soglu::TextureId
 	getTextureID()const
-	{ return mGLTextureID; }
+	{ return mTexture; }
 
 	int
 	getSampleCount()const
@@ -196,14 +164,63 @@ struct GLTransferFunctionBuffer1D
 		return mSampleCount;
 	}
 private:
-	GLTransferFunctionBuffer1D( GLuint aGLTextureID, MappedInterval aMappedInterval, int aSampleCount )
-		: mGLTextureID( aGLTextureID ), mMappedInterval( aMappedInterval ), mSampleCount( aSampleCount )
+	GLTransferFunctionBuffer1D(soglu::TextureObject &&aTexture, MappedInterval aMappedInterval, int aSampleCount )
+		: mTexture(std::move(aTexture))
+		, mMappedInterval( aMappedInterval )
+		, mSampleCount( aSampleCount )
 	{ /* empty */ }
 
-	soglu::TextureId mGLTextureID;
+	//soglu::TextureId mGLTextureID;
+	soglu::TextureObject mTexture;
 	MappedInterval mMappedInterval;
 	int mSampleCount;
 };
+
+
+struct GLTransferFunctionBuffer2D
+{
+	typedef std::pair<glm::fvec2, glm::fvec2> MappedInterval;
+	typedef std::pair<int, int> Resolution;
+	typedef std::shared_ptr< GLTransferFunctionBuffer2D > Ptr;
+	typedef std::shared_ptr< const GLTransferFunctionBuffer2D > ConstPtr;
+	typedef std::weak_ptr< GLTransferFunctionBuffer2D > WPtr;
+	typedef std::weak_ptr< const GLTransferFunctionBuffer2D > ConstWPtr;
+
+	~GLTransferFunctionBuffer2D()
+	{
+		/*assert(soglu::isGLContextActive());
+		glDeleteTextures(1, &(mGLTextureID.value));*/
+		//OpenGLManager::getInstance()->deleteTextures( mGLTextureID );
+	}
+
+	//friend GLTransferFunctionBuffer2D::Ptr createGLTransferFunctionBuffer1D( const TransferFunctionBuffer1D &aTransferFunction );
+
+	MappedInterval
+	getMappedInterval()const
+	{ return mMappedInterval; }
+
+	soglu::TextureId
+	getTextureID()const
+	{ return mTexture; }
+
+	Resolution
+	getResolution()const
+	{
+		return mResolution;
+	}
+private:
+	GLTransferFunctionBuffer2D(soglu::TextureObject &&aTexture, MappedInterval aMappedInterval, Resolution aResolution)
+		: mTexture(std::move(aTexture))
+		, mMappedInterval( aMappedInterval )
+		, mResolution( aResolution )
+	{ /* empty */ }
+
+	//soglu::TextureId mGLTextureID;
+	soglu::TextureObject mTexture;
+	MappedInterval mMappedInterval;
+	Resolution mResolution;
+};
+
 
 GLTransferFunctionBuffer1D::Ptr
 createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFunction);
@@ -232,6 +249,17 @@ setUniform(soglu::GLSLProgram &aProgram, const std::string &aUniformName, const 
 	aProgram.setUniformByName(aUniformName + ".data", aTextureUnit);
 	aProgram.setUniformByName(aUniformName + ".interval", aTransferFunction.getMappedInterval() );
 	aProgram.setUniformByName(aUniformName + ".sampleCount", aTransferFunction.getSampleCount() );
+}
+
+inline void
+setUniform(soglu::GLSLProgram &aProgram, const std::string &aUniformName, const vorgl::GLTransferFunctionBuffer2D &aTransferFunction, soglu::TextureUnitId aTextureUnit)
+{
+	soglu::gl::bindTexture(aTextureUnit, soglu::TextureTarget::Texture2D, aTransferFunction.getTextureID());
+	aProgram.setUniformByName(aUniformName + ".data", aTextureUnit);
+	aProgram.setUniformByName(aUniformName + ".from", aTransferFunction.getMappedInterval().first);
+	aProgram.setUniformByName(aUniformName + ".to", aTransferFunction.getMappedInterval().second);
+	aProgram.setUniformByName(aUniformName + ".xSamples", aTransferFunction.getResolution().first);
+	aProgram.setUniformByName(aUniformName + ".ySamples", aTransferFunction.getResolution().second);
 }
 
 } /*vorgl*/
