@@ -22,6 +22,7 @@
 #include <soglu/GLSLShader.hpp>
 
 #include <cassert>
+#include <boost/variant.hpp>
 
 namespace vorgl
 {
@@ -225,20 +226,28 @@ private:
 GLTransferFunctionBuffer1D::Ptr
 createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFunction);
 
+
+struct TransferFunctionBuffer1DInfo {
+	vorgl::GLTransferFunctionBuffer1D::Ptr tfGLBuffer;
+	//vorgl::TransferFunctionBuffer1D::Ptr tfBuffer;
+
+	vorgl::GLTransferFunctionBuffer1D::Ptr tfGLIntegralBuffer;
+	//vorgl::TransferFunctionBuffer1D::Ptr tfIntegralBuffer;
+};
+
+struct TransferFunctionBuffer2DInfo {
+	vorgl::GLTransferFunctionBuffer2D::Ptr tfGLBuffer;
+};
+
+typedef boost::variant<TransferFunctionBuffer1DInfo, TransferFunctionBuffer2DInfo> TFBufferInfoVariant;
+
 struct TransferFunctionBufferInfo
 {
-	/*TransferFunctionBufferInfo( M4D::Common::IDNumber aId, M4D::GUI::GLTransferFunctionBuffer1D::Ptr aTfGLBuffer, M4D::GUI::TransferFunctionBuffer1D::Ptr aTfBuffer ):
-		id(aId), tfGLBuffer( aTfGLBuffer ), tfBuffer( aTfBuffer )
-	{ }*/
 	TransferFunctionBufferInfo():id(-1)
 	{ }
 
-	/*M4D::Common::IDNumber*/int id;
-	vorgl::GLTransferFunctionBuffer1D::Ptr tfGLBuffer;
-	vorgl::TransferFunctionBuffer1D::Ptr tfBuffer;
-
-	vorgl::GLTransferFunctionBuffer1D::Ptr tfGLIntegralBuffer;
-	vorgl::TransferFunctionBuffer1D::Ptr tfIntegralBuffer;
+	int id;
+	TFBufferInfoVariant bufferInfo;
 };
 
 

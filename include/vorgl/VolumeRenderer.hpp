@@ -102,8 +102,10 @@ struct DensityRenderingOptions {
 
 struct TransferFunctionRenderingOptions : LightConfiguration {
 	//const GLTransferFunctionBuffer1D &transferFunction;
-	vorgl::GLTransferFunctionBuffer1D::ConstWPtr	transferFunction;
-	vorgl::GLTransferFunctionBuffer1D::ConstWPtr	integralTransferFunction;
+	/*vorgl::GLTransferFunctionBuffer1D::ConstWPtr	transferFunction;
+	vorgl::GLTransferFunctionBuffer1D::ConstWPtr	integralTransferFunction;*/
+	TFBufferInfoVariant transferFunction;
+
 	bool preintegratedTransferFunction;
 	//VolumeRenderer::TransferFunctionRenderFlags flags;
 };

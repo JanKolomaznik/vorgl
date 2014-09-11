@@ -64,10 +64,10 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
 	mShaderPath = aPath;
 
-	boost::filesystem::path vertexShaderPath = mShaderPath / "volume.vert.glsl";
+	/*boost::filesystem::path vertexShaderPath = mShaderPath / "volume.vert.glsl";
 	boost::filesystem::path fragmentShaderPath = mShaderPath / "volume.frag.glsl";
 
-	soglu::ShaderProgramSource volumeProgramSources = soglu::loadShaderProgramSource(aPath / "volume.cfg", aPath);
+	soglu::ShaderProgramSource volumeProgramSources = soglu::loadShaderProgramSource(aPath / "volume.cfg", aPath);*/
 
 	/*SOGLU_DEBUG_PRINT("Loading raycasting renderer shader program.");
 	mRayCastingProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(vertexShaderPath, aPath / "testvolume.frag.glsl");
@@ -206,6 +206,39 @@ VolumeRenderer::setRenderingOptions(
 	aShaderProgram.setUniformByName("gWLWindow", aDensityRenderingOptions.lutWindow);
 }
 
+class SetTFUniformStaticVisitor : public boost::static_visitor<void> {
+public:
+	SetTFUniformStaticVisitor(soglu::GLSLProgram &aShaderProgram, bool aPreintegrated)
+		: shaderProgram(aShaderProgram)
+		, preintegrated(aPreintegrated)
+	{}
+
+	void
+	operator()(const TransferFunctionBuffer1DInfo &aInfo) const {
+		vorgl::GLTransferFunctionBuffer1D::ConstPtr tf;
+		if (preintegrated) {
+			tf = aInfo.tfGLIntegralBuffer;
+		} else {
+			tf = aInfo.tfGLBuffer;
+		}
+		if (!tf) {
+			SOGLU_THROW(VorglError());
+		}
+		setUniform(shaderProgram, "gTransferFunction1D", *tf, soglu::TextureUnitId(VolumeRenderer::cTransferFunctionTextureUnit));
+	}
+
+	void
+	operator()(const TransferFunctionBuffer2DInfo &aInfo) const {
+		if (!aInfo.tfGLBuffer) {
+			SOGLU_THROW(VorglError());
+		}
+		setUniform(shaderProgram, "gTransferFunction2D", *(aInfo.tfGLBuffer), soglu::TextureUnitId(VolumeRenderer::cTransferFunctionTextureUnit));
+	}
+
+	soglu::GLSLProgram &shaderProgram;
+	bool preintegrated;
+};
+
 void
 VolumeRenderer::setRenderingOptions(
 	soglu::GLSLProgram &aShaderProgram,
@@ -213,7 +246,12 @@ VolumeRenderer::setRenderingOptions(
 	)
 {
 	setupLights(aShaderProgram, aTransferFunctionRenderingOptions.lightPosition);
-	vorgl::GLTransferFunctionBuffer1D::ConstPtr tf;
+
+	boost::apply_visitor(
+		SetTFUniformStaticVisitor(aShaderProgram, aTransferFunctionRenderingOptions.preintegratedTransferFunction),
+		aTransferFunctionRenderingOptions.transferFunction);
+
+	/*vorgl::GLTransferFunctionBuffer1D::ConstPtr tf;
 	if (aTransferFunctionRenderingOptions.preintegratedTransferFunction) {
 		tf = aTransferFunctionRenderingOptions.integralTransferFunction.lock();
 	} else {
@@ -222,7 +260,7 @@ VolumeRenderer::setRenderingOptions(
 	if (!tf) {
 		SOGLU_THROW(VorglError());
 	}
-	setUniform(aShaderProgram, "gTransferFunction1D", *tf, soglu::TextureUnitId(cTransferFunctionTextureUnit));
+	setUniform(aShaderProgram, "gTransferFunction1D", *tf, soglu::TextureUnitId(cTransferFunctionTextureUnit));*/
 }
 
 void
@@ -283,6 +321,31 @@ VolumeRenderer::getShaderProgram(
 }
 
 
+class ConfigureShaderStaticVisitor : public boost::static_visitor<void> {
+public:
+	ConfigureShaderStaticVisitor(std::string &aDefines, bool aPreintegrated)
+		: defines(aDefines)
+		, preintegrated(aPreintegrated)
+	{}
+
+	void
+	operator()(const TransferFunctionBuffer1DInfo &aInfo) const {
+		defines += "#define USE_TRANSFER_FUNCTION_1D\n";
+		if (preintegrated) {
+			defines += "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
+		}
+	}
+
+	void
+	operator()(const TransferFunctionBuffer2DInfo &aInfo) const {
+		defines += "#define USE_TRANSFER_FUNCTION_2D\n";
+	}
+
+	std::string &defines;
+	bool preintegrated;
+};
+
+
 soglu::GLSLProgram &
 VolumeRenderer::getShaderProgram(
 		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions,
@@ -297,9 +360,16 @@ VolumeRenderer::getShaderProgram(
 		defines += "#define ENABLE_SHADING\n";
 	}
 
-	if (aTransferFunctionRenderingOptions.preintegratedTransferFunction) {
-		defines += "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
-	}
+	boost::apply_visitor(
+		ConfigureShaderStaticVisitor(defines, aTransferFunctionRenderingOptions.preintegratedTransferFunction),
+		aTransferFunctionRenderingOptions.transferFunction);
+	/*if (aTransferFunctionRenderingOptions.transferFunction.which() == 0) {
+		defines += "#define USE_TRANSFER_FUNCTION_1D\n";
+		if (aTransferFunctionRenderingOptions.preintegratedTransferFunction) {
+			defines += "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
+		}
+	}*/
+
 	if (!mTFShaderPrograms[defines]) {
 		soglu::ShaderProgramSource tfProgramSources = soglu::loadShaderProgramSource(mShaderPath / "transfer_function_volume.cfg", mShaderPath);
 		mTFShaderPrograms[defines] = soglu::createShaderProgramFromSources(tfProgramSources, defines);
