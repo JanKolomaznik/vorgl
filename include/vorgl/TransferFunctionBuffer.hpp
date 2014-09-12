@@ -194,7 +194,7 @@ struct GLTransferFunctionBuffer2D
 		//OpenGLManager::getInstance()->deleteTextures( mGLTextureID );
 	}
 
-	//friend GLTransferFunctionBuffer2D::Ptr createGLTransferFunctionBuffer1D( const TransferFunctionBuffer1D &aTransferFunction );
+	friend GLTransferFunctionBuffer2D::Ptr createGLTransferFunctionBuffer2D(const RGBAf *aData, int aWidth, int aHeight, glm::fvec2 aFrom, glm::fvec2 aTo);
 
 	MappedInterval
 	getMappedInterval()const
@@ -226,6 +226,8 @@ private:
 GLTransferFunctionBuffer1D::Ptr
 createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFunction);
 
+GLTransferFunctionBuffer2D::Ptr
+createGLTransferFunctionBuffer2D(const RGBAf *aData, int aWidth, int aHeight, glm::fvec2 aFrom, glm::fvec2 aTo);
 
 struct TransferFunctionBuffer1DInfo {
 	vorgl::GLTransferFunctionBuffer1D::Ptr tfGLBuffer;

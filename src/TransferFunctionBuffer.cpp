@@ -54,55 +54,64 @@ createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFuncti
 	if ( aTransferFunction.size() == 0 ) {
 		throw "ErrorHandling::EBadParameter";//( "Transfer function buffer of 0 size" );
 	}
+	GL_CHECKED_CALL( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+	GL_CHECKED_CALL( glPixelStorei(GL_PACK_ALIGNMENT, 1) );
+	soglu::TextureObject texture;
+	texture.initialize();
+	auto textureBinder = getBinder(texture, GL_TEXTURE_1D); // TODO - check texture unit ID
 
-	/*GLuint texName;
+	GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE ) );
+	GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
+	GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
 
-	try {*/
-		GL_CHECKED_CALL( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-		GL_CHECKED_CALL( glPixelStorei(GL_PACK_ALIGNMENT, 1) );
-		//GL_CHECKED_CALL( glGenTextures( 1, &texName ) );
-		soglu::TextureObject texture;
-		texture.initialize();
-		auto textureBinder = getBinder(texture, GL_TEXTURE_1D); // TODO - check texture unit ID
-
-		//GL_CHECKED_CALL( glBindTexture ( GL_TEXTURE_1D, texName ) );
-		//GL_CHECKED_CALL( glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE ) );
-
-		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE ) );
-		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
-		GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
-
-
-		//GL_CHECKED_CALL( glEnable( GL_TEXTURE_1D ) );
-
-		//GL_CHECKED_CALL( glBindTexture( GL_TEXTURE_1D, texName ) );
-
-		GL_CHECKED_CALL(
-			glTexImage1D(
-				GL_TEXTURE_1D,
-				0,
-				GL_RGBA32F,
-				static_cast<GLsizei>(aTransferFunction.size()),
-				0,
-				GL_RGBA,
-				GL_FLOAT,
-				aTransferFunction.data()
-				)
-			);
-
-
-		// soglu::checkForGLError( "OGL building texture for transfer function: " );
-	/*}
-	catch(std::exception &) {
-		if( texName != 0 ) {
-			glDeleteTextures( 1, &texName );
-		}
-		throw;
-	}*/
+	GL_CHECKED_CALL(
+		glTexImage1D(
+			GL_TEXTURE_1D,
+			0,
+			GL_RGBA32F,
+			static_cast<GLsizei>(aTransferFunction.size()),
+			0,
+			GL_RGBA,
+			GL_FLOAT,
+			aTransferFunction.data()
+			)
+		);
 
 	return GLTransferFunctionBuffer1D::Ptr(new GLTransferFunctionBuffer1D(std::move(texture), aTransferFunction.getMappedInterval(), int(aTransferFunction.size())));
-	//return GLTransferFunctionBuffer1D::Ptr()
 }
 
+GLTransferFunctionBuffer2D::Ptr
+createGLTransferFunctionBuffer2D(const RGBAf *aData, int aWidth, int aHeight, glm::fvec2 aFrom, glm::fvec2 aTo)
+{
+	GL_CHECKED_CALL( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
+	GL_CHECKED_CALL( glPixelStorei(GL_PACK_ALIGNMENT, 1) );
+	soglu::TextureObject texture;
+	texture.initialize();
+	auto textureBinder = getBinder(texture, GL_TEXTURE_2D); // TODO - check texture unit ID
+
+	GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE ) );
+	GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE ) );
+	GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR ) );
+	GL_CHECKED_CALL( glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR ) );
+
+	GL_CHECKED_CALL(
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA32F,
+			static_cast<GLsizei>(aWidth),
+			static_cast<GLsizei>(aHeight),
+			0,
+			GL_RGBA,
+			GL_FLOAT,
+			aData)
+		);
+
+	return GLTransferFunctionBuffer2D::Ptr(
+			new GLTransferFunctionBuffer2D(
+				std::move(texture),
+				GLTransferFunctionBuffer2D::MappedInterval(aFrom, aTo),
+				GLTransferFunctionBuffer2D::Resolution(aWidth, aHeight)));
+}
 
 } /*vorgl*/
