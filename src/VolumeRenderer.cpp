@@ -298,7 +298,7 @@ VolumeRenderer::getShaderProgram(
 		const DensityRenderingOptions &aDensityRenderingOptions,
 		const RenderingQuality &aRenderingQuality)
 {
-	std::string defines = "#define TRANSFER_FUNCTION_RENDERING\n";
+	std::string defines = "#define DENSITY_RENDERING\n";
 	if (aRenderingQuality.enableJittering) {
 		defines += "#define ENABLE_JITTERING\n";
 	}
@@ -313,11 +313,11 @@ VolumeRenderer::getShaderProgram(
 	}
 	return mDensityShaderPrograms[defines];
 
-	if (!mRayCastingProgram) {
+	/*if (!mRayCastingProgram) {
 		soglu::ShaderProgramSource densityProgramSources = soglu::loadShaderProgramSource(mShaderPath / "density_volume.cfg", mShaderPath);
 		mRayCastingProgram = soglu::createShaderProgramFromSources(densityProgramSources, "");
 	}
-	return mRayCastingProgram;
+	return mRayCastingProgram;*/
 }
 
 
