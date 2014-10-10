@@ -64,15 +64,6 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
 	mShaderPath = aPath;
 
-	/*boost::filesystem::path vertexShaderPath = mShaderPath / "volume.vert.glsl";
-	boost::filesystem::path fragmentShaderPath = mShaderPath / "volume.frag.glsl";
-
-	soglu::ShaderProgramSource volumeProgramSources = soglu::loadShaderProgramSource(aPath / "volume.cfg", aPath);*/
-
-	/*SOGLU_DEBUG_PRINT("Loading raycasting renderer shader program.");
-	mRayCastingProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(vertexShaderPath, aPath / "testvolume.frag.glsl");
-	SOGLU_DEBUG_PRINT("Raycasting renderer shader program loaded.");*/
-
 	mBasicShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "basic_vertex.glsl", aPath / "basic_fragment.glsl");
 
 	mTFShaderPrograms.clear();

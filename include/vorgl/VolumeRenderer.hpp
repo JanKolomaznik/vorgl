@@ -308,7 +308,7 @@ protected:
 		const TRenderingOptions &aRenderingOptions
 		);
 
-	soglu::GLSLProgram mRayCastingProgram;
+	//soglu::GLSLProgram mRayCastingProgram;
 	soglu::GLSLProgram mBasicShaderProgram;
 
 	std::unordered_map<std::string, soglu::GLSLProgram> mTFShaderPrograms;

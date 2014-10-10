@@ -9,6 +9,8 @@ namespace vorgl
 void
 SliceRenderer::initialize(const boost::filesystem::path &aPath)
 {
+	mShaderPath = aPath;
+
 	loadShaders(aPath);
 
 	mLinearInterpolationSampler.initialize();
@@ -26,6 +28,22 @@ SliceRenderer::finalize()
 	mShaderProgram.finalize();
 	mLinearInterpolationSampler.finalize();
 	mNoInterpolationSampler.finalize();
+}
+
+void
+SliceRenderer::brightnessContrastRendering(
+		const soglu::GLViewSetup &aViewSetup,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const SliceConfiguration &aSlice,
+		const SliceRenderingQuality &aRenderingQuality,
+		const BrightnessContrastRenderingOptions &aBCOptions)
+{
+	renderSlice(
+		aViewSetup,
+		aImage,
+		aSlice,
+		aRenderingQuality,
+		aBCOptions);
 }
 
 void
@@ -140,25 +158,6 @@ SliceRenderer::lutWindowRendering(
 		});
 
 	soglu::Sampler::unbind(soglu::TextureUnitId(0));
-	/*mCgEffect.setParameter("gPrimaryImageData3D", aImage);
-	mCgEffect.setParameter("gMappedIntervalBands", aImage.getMappedInterval());
-
-	mCgEffect.setParameter("gEnableInterpolation", aEnableInterpolation);
-
-	mCgEffect.setParameter("gViewSetup", aViewSetup);
-
-	mCgEffect.setParameter("gWLWindow", aLutWindow);
-	std::string techniqueName = "WLWindow_3D";
-
-	mCgEffect.executeTechniquePass(
-			techniqueName,
-			boost::bind( &vorgl::GLDrawVolumeSlice3D,
-				aImage.getExtents().realMinimum,
-				aImage.getExtents().realMaximum,
-				aSlice,
-				aPlane
-				)
-			);*/
 }
 
 void
@@ -220,6 +219,94 @@ SliceRenderer::overlayMaskRendering(
 				aPlane
 				)
 			);*/
+}
+
+void
+SliceRenderer::setSliceRenderingImageData(
+		soglu::GLSLProgram &aShaderProgram,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		bool aEnableInterpolation
+		)
+{
+	aShaderProgram.setUniformByName("gPrimaryImageData3D", aImage, soglu::TextureUnitId(cData1TextureUnit));
+	aShaderProgram.setUniformByName("gMappedIntervalBands", aImage.getMappedInterval());
+
+	if (aEnableInterpolation) {
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+	} else {
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+	}
+}
+
+void
+SliceRenderer::setViewSetup(
+		soglu::GLSLProgram &aShaderProgram,
+		const soglu::GLViewSetup &aViewSetup
+		)
+{
+	aShaderProgram.setUniformByName("gViewSetup", aViewSetup);
+}
+
+
+soglu::GLSLProgram &
+SliceRenderer::getShaderProgram(
+		const BrightnessContrastRenderingOptions &aBCOptions,
+		const SliceRenderingQuality &aRenderingQuality)
+{
+	std::string defines = "#define BRIGHTNESS_CONTRAST_RENDERING\n";
+
+	if (!mBrightnessContrastShaderPrograms[defines]) {
+		soglu::ShaderProgramSource brightnessContrastProgramSources = soglu::loadShaderProgramSource(mShaderPath / "brightness_contrast_slice.cfg", mShaderPath);
+		mBrightnessContrastShaderPrograms[defines] = soglu::createShaderProgramFromSources(brightnessContrastProgramSources, defines);
+	}
+	return mBrightnessContrastShaderPrograms[defines];
+}
+
+
+void
+SliceRenderer::setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const BrightnessContrastRenderingOptions &aBCOptions
+		)
+{
+	aShaderProgram.setUniformByName("gWLWindow", aBCOptions.lutWindow);
+}
+
+
+template<typename TRenderingOptions>
+void
+SliceRenderer::renderSlice(
+	const soglu::GLViewSetup &aViewSetup,
+	const soglu::GLTextureImageTyped<3> &aImage,
+	const SliceConfiguration &aSlice,
+	const SliceRenderingQuality &aRenderingQuality,
+	const TRenderingOptions &aRenderingOptions
+	)
+{
+	soglu::GLSLProgram &shaderProgram = getShaderProgram(aRenderingOptions, aRenderingQuality);
+
+	/*auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
+	renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
+
+	auto depth_test_disabler = soglu::disable(GL_DEPTH_TEST);
+	GL_CHECKED_CALL(glCullFace(GL_BACK));*/
+
+	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
+	auto programBinder = getBinder(shaderProgram);
+
+	setViewSetup(shaderProgram, aViewSetup);
+	//setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
+	setSliceRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
+
+	setRenderingOptions(shaderProgram, aRenderingOptions);
+
+	shaderProgram.use([&aImage, &aSlice, vertexLocation]() {
+			soglu::drawVertexBuffer(
+				generateVolumeSlice(aImage.getExtents().realMinimum, aImage.getExtents().realMaximum, aSlice.slice, aSlice.plane),
+				GL_TRIANGLE_FAN,
+				vertexLocation
+				);
+		});
 }
 
 
