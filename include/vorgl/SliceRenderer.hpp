@@ -49,7 +49,7 @@ public:
 		const BrightnessContrastRenderingOptions &aBCOptions
 		);
 
-	void
+	/*void
 	lutWindowRendering(
 		const soglu::GLTextureImageTyped<3> &aImage,
 		float aSlice,
@@ -57,7 +57,7 @@ public:
 		glm::fvec2 aLutWindow,
 		bool aEnableInterpolation,
 		const soglu::GLViewSetup &aViewSetup
-		);
+		);*/
 
 	void
 	transferFunctionRendering(
@@ -120,7 +120,7 @@ protected:
 
 	std::unordered_map<std::string, soglu::GLSLProgram> mBrightnessContrastShaderPrograms;
 
-	soglu::GLSLProgram mShaderProgram;
+	//soglu::GLSLProgram mShaderProgram;
 	soglu::Sampler mLinearInterpolationSampler;
 	soglu::Sampler mNoInterpolationSampler;
 

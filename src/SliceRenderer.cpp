@@ -25,7 +25,7 @@ SliceRenderer::initialize(const boost::filesystem::path &aPath)
 void
 SliceRenderer::finalize()
 {
-	mShaderProgram.finalize();
+	//mShaderProgram.finalize();
 	mLinearInterpolationSampler.finalize();
 	mNoInterpolationSampler.finalize();
 }
@@ -49,9 +49,10 @@ SliceRenderer::brightnessContrastRendering(
 void
 SliceRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
-	SOGLU_DEBUG_PRINT("Loading slice renderer shader programs.");
-	mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "slice.vert.glsl", aPath / "slice.frag.glsl");
-	SOGLU_DEBUG_PRINT("Slice renderer shader programs loaded.");
+	mBrightnessContrastShaderPrograms.clear();
+	//SOGLU_DEBUG_PRINT("Loading slice renderer shader programs.");
+	//mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "slice.vert.glsl", aPath / "slice.frag.glsl");
+	//SOGLU_DEBUG_PRINT("Slice renderer shader programs loaded.");
 }
 
 /*
@@ -128,7 +129,7 @@ SliceRenderer::Render( SliceRenderer::RenderingConfiguration & aConfig, const GL
 }
 */
 
-void
+/*void
 SliceRenderer::lutWindowRendering(
 	const soglu::GLTextureImageTyped<3> &aImage,
 	float aSlice,
@@ -159,7 +160,7 @@ SliceRenderer::lutWindowRendering(
 
 	soglu::Sampler::unbind(soglu::TextureUnitId(0));
 }
-
+*/
 void
 SliceRenderer::transferFunctionRendering(
 	const soglu::GLTextureImageTyped<3> &aImage,
