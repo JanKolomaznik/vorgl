@@ -262,7 +262,7 @@ VolumeRenderer::setRenderingOptions(
 {
 	setupLights(aShaderProgram, aIsoSurfaceRenderingOptions.lightPosition);
 	aShaderProgram.setUniformByName("gIsoValue", aIsoSurfaceRenderingOptions.isoValue);
-	aShaderProgram.setUniformByName("gSurfaceColor", glm::vec4(0.0, 1.0, 0.0, 1.0));
+	aShaderProgram.setUniformByName("gSurfaceColor", aIsoSurfaceRenderingOptions.isoSurfaceColor);
 }
 
 void
@@ -380,7 +380,7 @@ VolumeRenderer::getShaderProgram(
 	}
 	return mIsoSurfaceShaderProgram;
 }
-
+/*
 template<typename TRenderingOptions>
 void
 VolumeRenderer::renderVolume(
@@ -409,12 +409,15 @@ VolumeRenderer::renderVolume(
 	setRenderingOptions(shaderProgram, aRenderingOptions);
 
 	soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aViewConfiguration.boundingBox), GL_TRIANGLE_STRIP, vertexLocation);
-}
+}*/
 
+/*
+
+template<typename TInputData>
 void
 VolumeRenderer::densityRendering(
 		const VolumeRenderingConfiguration &aViewConfiguration,
-		const soglu::GLTextureImageTyped<3> &aImage,
+		const TInputData &aImage,
 		const RenderingQuality &aRenderingQuality,
 		const ClipPlanes &aCutPlanes,
 		const DensityRenderingOptions &aDensityRenderingOptions
@@ -423,29 +426,34 @@ VolumeRenderer::densityRendering(
 	renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aDensityRenderingOptions);
 }
 
+
+template<typename TInputData>
 void
 VolumeRenderer::transferFunctionRendering(
-	const VolumeRenderingConfiguration &aViewConfiguration,
-	const soglu::GLTextureImageTyped<3> &aImage,
-	const RenderingQuality &aRenderingQuality,
-	const ClipPlanes &aCutPlanes,
-	const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
-	)
+		const VolumeRenderingConfiguration &aViewConfiguration,
+		const TInputData &aImage,
+		const RenderingQuality &aRenderingQuality,
+		const ClipPlanes &aCutPlanes,
+		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
+		)
 {
 	renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aTransferFunctionRenderingOptions);
 }
 
+template<typename TInputData>
 void
 VolumeRenderer::isosurfaceRendering(
-	const VolumeRenderingConfiguration &aViewConfiguration,
-	const soglu::GLTextureImageTyped<3> &aImage,
-	const RenderingQuality &aRenderingQuality,
-	const ClipPlanes &aCutPlanes,
-	const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
-	)
+		const VolumeRenderingConfiguration &aViewConfiguration,
+		const TInputData &aImage,
+		const RenderingQuality &aRenderingQuality,
+		const ClipPlanes &aCutPlanes,
+		const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
+		)
 {
 	renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aIsoSurfaceRenderingOptions);
 }
+*/
+
 
 
 }//vorgl

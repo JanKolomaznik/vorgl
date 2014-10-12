@@ -120,6 +120,7 @@ struct VolumeRenderingConfiguration {
 
 struct IsoSurfaceRenderingOptions : LightConfiguration {
 	float isoValue;
+	glm::fvec4 isoSurfaceColor;
 };
 
 struct RenderingQuality {
@@ -193,32 +194,44 @@ public:
 	void
 	finalize();
 
+	template<typename TInputData>
 	void
 	densityRendering(
-		const VolumeRenderingConfiguration &aViewConfiguration,
-		const soglu::GLTextureImageTyped<3> &aImage,
-		const RenderingQuality &aRenderingQuality,
-		const ClipPlanes &aCutPlane,
-		const DensityRenderingOptions &aDensityRenderingOptions
-		);
+			const VolumeRenderingConfiguration &aViewConfiguration,
+			const TInputData &aImage,
+			const RenderingQuality &aRenderingQuality,
+			const ClipPlanes &aCutPlanes,
+			const DensityRenderingOptions &aDensityRenderingOptions
+			)
+	{
+		renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aDensityRenderingOptions);
+	}
 
+	template<typename TInputData>
 	void
 	transferFunctionRendering(
-		const VolumeRenderingConfiguration &aViewConfiguration,
-		const soglu::GLTextureImageTyped<3> &aImage,
-		const RenderingQuality &aRenderingQuality,
-		const ClipPlanes &aCutPlanes,
-		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
-		);
+			const VolumeRenderingConfiguration &aViewConfiguration,
+			const TInputData &aImage,
+			const RenderingQuality &aRenderingQuality,
+			const ClipPlanes &aCutPlanes,
+			const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions
+			)
+	{
+		renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aTransferFunctionRenderingOptions);
+	}
 
+	template<typename TInputData>
 	void
 	isosurfaceRendering(
-		const VolumeRenderingConfiguration &aViewConfiguration,
-		const soglu::GLTextureImageTyped<3> &aImage,
-		const RenderingQuality &aRenderingQuality,
-		const ClipPlanes &aCutPlanes,
-		const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
-		);
+			const VolumeRenderingConfiguration &aViewConfiguration,
+			const TInputData &aImage,
+			const RenderingQuality &aRenderingQuality,
+			const ClipPlanes &aCutPlanes,
+			const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
+			)
+	{
+		renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aIsoSurfaceRenderingOptions);
+	}
 
 protected:
 	void
@@ -298,15 +311,35 @@ protected:
 		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions
 		);
 
-	template<typename TRenderingOptions>
+	template<typename TInputData, typename TRenderingOptions>
 	void
 	renderVolume(
 		const VolumeRenderingConfiguration &aViewConfiguration,
-		const soglu::GLTextureImageTyped<3> &aImage,
+		const TInputData &aImage,
 		const RenderingQuality &aRenderingQuality,
 		const ClipPlanes &aCutPlanes,
 		const TRenderingOptions &aRenderingOptions
-		);
+		)
+	{
+		soglu::GLSLProgram &shaderProgram = getShaderProgram(aRenderingOptions, aRenderingQuality);
+
+		auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
+		renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
+
+		auto depth_test_disabler = soglu::disable(GL_DEPTH_TEST);
+		GL_CHECKED_CALL(glCullFace(GL_BACK));
+
+		int vertexLocation = shaderProgram.getAttributeLocation("vertex");
+		auto programBinder = getBinder(shaderProgram);
+
+		setVolumeRenderingViewConfiguration(shaderProgram, aViewConfiguration);
+		setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
+		setVolumeRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
+
+		setRenderingOptions(shaderProgram, aRenderingOptions);
+
+		soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aViewConfiguration.boundingBox), GL_TRIANGLE_STRIP, vertexLocation);
+	}
 
 	//soglu::GLSLProgram mRayCastingProgram;
 	soglu::GLSLProgram mBasicShaderProgram;

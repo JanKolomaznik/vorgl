@@ -286,17 +286,10 @@ SliceRenderer::renderSlice(
 {
 	soglu::GLSLProgram &shaderProgram = getShaderProgram(aRenderingOptions, aRenderingQuality);
 
-	/*auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
-	renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
-
-	auto depth_test_disabler = soglu::disable(GL_DEPTH_TEST);
-	GL_CHECKED_CALL(glCullFace(GL_BACK));*/
-
 	int vertexLocation = shaderProgram.getAttributeLocation("vertex");
 	auto programBinder = getBinder(shaderProgram);
 
 	setViewSetup(shaderProgram, aViewSetup);
-	//setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
 	setSliceRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
 
 	setRenderingOptions(shaderProgram, aRenderingOptions);
