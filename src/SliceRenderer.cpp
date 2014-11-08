@@ -46,10 +46,26 @@ SliceRenderer::brightnessContrastRendering(
 		aBCOptions);
 }
 
+void SliceRenderer::maskRendering(
+		const soglu::GLViewSetup &aViewSetup,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const SliceConfiguration &aSlice,
+		const SliceRenderingQuality &aRenderingQuality,
+		const MaskRenderingOptions &aOptions)
+{
+	renderSlice(
+		aViewSetup,
+		aImage,
+		aSlice,
+		aRenderingQuality,
+		aOptions);
+}
+
 void
 SliceRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
 	mBrightnessContrastShaderPrograms.clear();
+	mMaskShaderPrograms.clear();
 	//SOGLU_DEBUG_PRINT("Loading slice renderer shader programs.");
 	//mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "slice.vert.glsl", aPath / "slice.frag.glsl");
 	//SOGLU_DEBUG_PRINT("Slice renderer shader programs loaded.");
@@ -264,6 +280,20 @@ SliceRenderer::getShaderProgram(
 }
 
 
+soglu::GLSLProgram &
+SliceRenderer::getShaderProgram(
+		const MaskRenderingOptions &aOptions,
+		const SliceRenderingQuality &aRenderingQuality)
+{
+	std::string defines;// = "#define BRIGHTNESS_CONTRAST_RENDERING\n";
+
+	if (!mMaskShaderPrograms[defines]) {
+		soglu::ShaderProgramSource maskProgramSources = soglu::loadShaderProgramSource(mShaderPath / "mask_slice.cfg", mShaderPath);
+		mMaskShaderPrograms[defines] = soglu::createShaderProgramFromSources(maskProgramSources, defines);
+	}
+	return mMaskShaderPrograms[defines];
+}
+
 void
 SliceRenderer::setRenderingOptions(
 		soglu::GLSLProgram &aShaderProgram,
@@ -271,6 +301,11 @@ SliceRenderer::setRenderingOptions(
 		)
 {
 	aShaderProgram.setUniformByName("gWLWindow", aBCOptions.lutWindow);
+}
+
+void SliceRenderer::setRenderingOptions(soglu::GLSLProgram &aShaderProgram, const MaskRenderingOptions &aOptions)
+{
+	aShaderProgram.setUniformByName("gMaskColor", aOptions.maskColor);
 }
 
 

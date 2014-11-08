@@ -17,6 +17,22 @@
 
 #include <type_traits>
 
+struct MaskedImage {
+	const soglu::GLTextureImageTyped<3> &image;
+	const soglu::GLTextureImageTyped<3> &mask;
+};
+
+inline std::string
+definesFromInput(const soglu::GLTextureImageTyped<3>&)
+{
+	return std::string();
+}
+
+inline std::string
+definesFromInput(const MaskedImage&)
+{
+	return "#define USE_MASK\n";
+}
 
 // TODO - find better place
 template <typename TEnum>
@@ -182,6 +198,7 @@ public:
 		cJitteringTextureUnit = 10,
 		cTransferFunctionTextureUnit = 11,
 		cData1TextureUnit = 12,
+		cMaskTextureUnit = 13,
 	};
 
 	typedef Flags<TFFlags> TransferFunctionRenderFlags;
@@ -252,21 +269,94 @@ protected:
 	void
 	loadShaders(const boost::filesystem::path &aPath);
 
+	template<typename TInputData>
 	soglu::GLSLProgram &
 	getShaderProgram(
-		const DensityRenderingOptions &aDensityRenderingOptions,
-		const RenderingQuality &aRenderingQuality);
+			const TInputData &aData,
+			const DensityRenderingOptions &aDensityRenderingOptions,
+			const RenderingQuality &aRenderingQuality)
+	{
+		std::string defines = definesFromInput(aData) + "#define DENSITY_RENDERING\n";
+		if (aRenderingQuality.enableJittering) {
+			defines += "#define ENABLE_JITTERING\n";
+		}
 
+		if (aDensityRenderingOptions.enableMIP) {
+			defines += "#define ENABLE_MIP\n";
+		}
+
+		if (!mDensityShaderPrograms[defines]) {
+			soglu::ShaderProgramSource densityProgramSources = soglu::loadShaderProgramSource(mShaderPath / "density_volume.cfg", mShaderPath);
+			mDensityShaderPrograms[defines] = soglu::createShaderProgramFromSources(densityProgramSources, defines);
+		}
+		return mDensityShaderPrograms[defines];
+	}
+
+	class ConfigureShaderStaticVisitor : public boost::static_visitor<void> {
+	public:
+		ConfigureShaderStaticVisitor(std::string &aDefines, bool aPreintegrated)
+			: defines(aDefines)
+			, preintegrated(aPreintegrated)
+		{}
+
+		void
+		operator()(const TransferFunctionBuffer1DInfo &aInfo) const {
+			defines += "#define USE_TRANSFER_FUNCTION_1D\n";
+			if (preintegrated) {
+				defines += "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
+			}
+		}
+
+		void
+		operator()(const TransferFunctionBuffer2DInfo &aInfo) const {
+			defines += "#define USE_TRANSFER_FUNCTION_2D\n";
+		}
+
+		std::string &defines;
+		bool preintegrated;
+	};
+
+	template<typename TInputData>
 	soglu::GLSLProgram &
 	getShaderProgram(
-		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions,
-		const RenderingQuality &aRenderingQuality);
+			const TInputData &aData,
+			const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions,
+			const RenderingQuality &aRenderingQuality)
+	{
+		std::string defines = definesFromInput(aData) + "#define TRANSFER_FUNCTION_RENDERING\n";
+		if (aRenderingQuality.enableJittering) {
+			defines += "#define ENABLE_JITTERING\n";
+		}
 
+		if (aTransferFunctionRenderingOptions.enableLight) {
+			defines += "#define ENABLE_SHADING\n";
+		}
+
+		boost::apply_visitor(
+			ConfigureShaderStaticVisitor(defines, aTransferFunctionRenderingOptions.preintegratedTransferFunction),
+			aTransferFunctionRenderingOptions.transferFunction);
+
+		if (!mTFShaderPrograms[defines]) {
+			soglu::ShaderProgramSource tfProgramSources = soglu::loadShaderProgramSource(mShaderPath / "transfer_function_volume.cfg", mShaderPath);
+			mTFShaderPrograms[defines] = soglu::createShaderProgramFromSources(tfProgramSources, defines);
+		}
+		return mTFShaderPrograms[defines];
+	}
+
+	template<typename TInputData>
 	soglu::GLSLProgram &
 	getShaderProgram(
-		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions,
-		const RenderingQuality &aRenderingQuality);
-
+			const TInputData &aData,
+			const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions,
+			const RenderingQuality &aRenderingQuality)
+	{
+		std::string defines = definesFromInput(aData);
+		if (!mIsoSurfaceShaderPrograms[defines]) {
+			soglu::ShaderProgramSource isoSurfaceProgramSources = soglu::loadShaderProgramSource(mShaderPath / "iso_surface_volume.cfg", mShaderPath);
+			mIsoSurfaceShaderPrograms[defines] = soglu::createShaderProgramFromSources(isoSurfaceProgramSources, defines);
+		}
+		return mIsoSurfaceShaderPrograms[defines];
+	}
 
 	void
 	renderAuxiliaryGeometryForRaycasting(
@@ -278,6 +368,13 @@ protected:
 	setVolumeRenderingImageData(
 		soglu::GLSLProgram &aShaderProgram,
 		const soglu::GLTextureImageTyped<3> &aImage,
+		bool aEnableInterpolation
+		);
+
+	void
+	setVolumeRenderingImageData(
+		soglu::GLSLProgram &aShaderProgram,
+		const MaskedImage &aData,
 		bool aEnableInterpolation
 		);
 
@@ -315,13 +412,13 @@ protected:
 	void
 	renderVolume(
 		const VolumeRenderingConfiguration &aViewConfiguration,
-		const TInputData &aImage,
+		const TInputData &aData,
 		const RenderingQuality &aRenderingQuality,
 		const ClipPlanes &aCutPlanes,
 		const TRenderingOptions &aRenderingOptions
 		)
 	{
-		soglu::GLSLProgram &shaderProgram = getShaderProgram(aRenderingOptions, aRenderingQuality);
+		soglu::GLSLProgram &shaderProgram = getShaderProgram(aData, aRenderingOptions, aRenderingQuality);
 
 		auto cull_face_enabler = soglu::enable(GL_CULL_FACE);
 		renderAuxiliaryGeometryForRaycasting(aViewConfiguration, aCutPlanes);
@@ -334,7 +431,7 @@ protected:
 
 		setVolumeRenderingViewConfiguration(shaderProgram, aViewConfiguration);
 		setVolumeRenderingQuality(shaderProgram, aRenderingQuality, aViewConfiguration);
-		setVolumeRenderingImageData(shaderProgram, aImage, aRenderingQuality.enableInterpolation);
+		setVolumeRenderingImageData(shaderProgram, aData, aRenderingQuality.enableInterpolation);
 
 		setRenderingOptions(shaderProgram, aRenderingOptions);
 
@@ -346,8 +443,8 @@ protected:
 
 	std::unordered_map<std::string, soglu::GLSLProgram> mTFShaderPrograms;
 	std::unordered_map<std::string, soglu::GLSLProgram> mDensityShaderPrograms;
-	//std::unordered_map<std::string, soglu::GLSLProgram> mIsoSurfaceShaderPrograms;
-	soglu::GLSLProgram mIsoSurfaceShaderProgram;
+	std::unordered_map<std::string, soglu::GLSLProgram> mIsoSurfaceShaderPrograms;
+	//soglu::GLSLProgram mIsoSurfaceShaderProgram;
 
 
 	soglu::TextureId mNoiseMap;
@@ -355,6 +452,7 @@ protected:
 
 	soglu::Sampler mLinearInterpolationSampler;
 	soglu::Sampler mNoInterpolationSampler;
+	soglu::Sampler mMaskSampler;
 	float mJitterStrength;
 
 	boost::filesystem::path mShaderPath;

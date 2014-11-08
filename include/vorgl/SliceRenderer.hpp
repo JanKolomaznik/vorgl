@@ -18,6 +18,10 @@ struct SliceRenderingQuality {
 	bool enableInterpolation;
 };
 
+struct MaskRenderingOptions {
+	glm::fvec4 maskColor;
+};
+
 struct BrightnessContrastRenderingOptions {
 	glm::fvec2 lutWindow;
 };
@@ -47,6 +51,15 @@ public:
 		const SliceConfiguration &aSlice,
 		const SliceRenderingQuality &aRenderingQuality,
 		const BrightnessContrastRenderingOptions &aBCOptions
+		);
+
+	void
+	maskRendering(
+		const soglu::GLViewSetup &aViewSetup,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const SliceConfiguration &aSlice,
+		const SliceRenderingQuality &aRenderingQuality,
+		const MaskRenderingOptions &aOptions
 		);
 
 	/*void
@@ -102,11 +115,22 @@ protected:
 			const BrightnessContrastRenderingOptions &aBCOptions
 			);
 
+	void
+	setRenderingOptions(
+			soglu::GLSLProgram &aShaderProgram,
+			const MaskRenderingOptions &aOptions
+			);
+
 	soglu::GLSLProgram &
 	getShaderProgram(
 			const BrightnessContrastRenderingOptions &aBCOptions,
 			const SliceRenderingQuality &aRenderingQuality
 			);
+
+	soglu::GLSLProgram &
+	getShaderProgram(
+			const MaskRenderingOptions &aOptions,
+			const SliceRenderingQuality &aRenderingQuality);
 
 	template<typename TRenderingOptions>
 	void
@@ -119,6 +143,7 @@ protected:
 		);
 
 	std::unordered_map<std::string, soglu::GLSLProgram> mBrightnessContrastShaderPrograms;
+	std::unordered_map<std::string, soglu::GLSLProgram> mMaskShaderPrograms;
 
 	//soglu::GLSLProgram mShaderProgram;
 	soglu::Sampler mLinearInterpolationSampler;

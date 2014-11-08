@@ -56,6 +56,14 @@ VolumeRenderer::initialize(const boost::filesystem::path &aPath)
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
 
+
+	mMaskSampler.initialize();
+	mMaskSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	mMaskSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	mMaskSampler.setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	mMaskSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	mMaskSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+	mMaskSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
 	initJitteringTexture();
 }
 
@@ -68,7 +76,7 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 
 	mTFShaderPrograms.clear();
 	mDensityShaderPrograms.clear();
-	mIsoSurfaceShaderProgram.finalize();
+	mIsoSurfaceShaderPrograms.clear();
 }
 
 void
@@ -187,6 +195,22 @@ VolumeRenderer::setVolumeRenderingImageData(
 	}
 }
 
+void VolumeRenderer::setVolumeRenderingImageData(soglu::GLSLProgram &aShaderProgram, const MaskedImage &aData, bool aEnableInterpolation)
+{
+	aShaderProgram.setUniformByName("gPrimaryImageData3D", aData.image, soglu::TextureUnitId(cData1TextureUnit));
+	aShaderProgram.setUniformByName("gMappedIntervalBands", aData.image.getMappedInterval());
+
+	if (aEnableInterpolation) {
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+	} else {
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+	}
+
+	aShaderProgram.setUniformByName("gMaskData3D", aData.mask, soglu::TextureUnitId(cMaskTextureUnit));
+	//aShaderProgram.setUniformByName("gMappedIntervalBands", aData.image.getMappedInterval());
+	mMaskSampler.bind(soglu::TextureUnitId(cMaskTextureUnit));
+}
+
 
 void
 VolumeRenderer::setRenderingOptions(
@@ -284,102 +308,15 @@ VolumeRenderer::renderAuxiliaryGeometryForRaycasting(
 		soglu::drawVertexIndexBuffers(soglu::generateBoundingBoxBuffers(aViewConfiguration.boundingBox), GL_TRIANGLE_STRIP, vertexLocation);
 }
 
-soglu::GLSLProgram &
-VolumeRenderer::getShaderProgram(
-		const DensityRenderingOptions &aDensityRenderingOptions,
-		const RenderingQuality &aRenderingQuality)
-{
-	std::string defines = "#define DENSITY_RENDERING\n";
-	if (aRenderingQuality.enableJittering) {
-		defines += "#define ENABLE_JITTERING\n";
-	}
-
-	if (aDensityRenderingOptions.enableMIP) {
-		defines += "#define ENABLE_MIP\n";
-	}
-
-	if (!mDensityShaderPrograms[defines]) {
-		soglu::ShaderProgramSource densityProgramSources = soglu::loadShaderProgramSource(mShaderPath / "density_volume.cfg", mShaderPath);
-		mDensityShaderPrograms[defines] = soglu::createShaderProgramFromSources(densityProgramSources, defines);
-	}
-	return mDensityShaderPrograms[defines];
-
-	/*if (!mRayCastingProgram) {
-		soglu::ShaderProgramSource densityProgramSources = soglu::loadShaderProgramSource(mShaderPath / "density_volume.cfg", mShaderPath);
-		mRayCastingProgram = soglu::createShaderProgramFromSources(densityProgramSources, "");
-	}
-	return mRayCastingProgram;*/
-}
 
 
-class ConfigureShaderStaticVisitor : public boost::static_visitor<void> {
-public:
-	ConfigureShaderStaticVisitor(std::string &aDefines, bool aPreintegrated)
-		: defines(aDefines)
-		, preintegrated(aPreintegrated)
-	{}
-
-	void
-	operator()(const TransferFunctionBuffer1DInfo &aInfo) const {
-		defines += "#define USE_TRANSFER_FUNCTION_1D\n";
-		if (preintegrated) {
-			defines += "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
-		}
-	}
-
-	void
-	operator()(const TransferFunctionBuffer2DInfo &aInfo) const {
-		defines += "#define USE_TRANSFER_FUNCTION_2D\n";
-	}
-
-	std::string &defines;
-	bool preintegrated;
-};
 
 
-soglu::GLSLProgram &
-VolumeRenderer::getShaderProgram(
-		const TransferFunctionRenderingOptions &aTransferFunctionRenderingOptions,
-		const RenderingQuality &aRenderingQuality)
-{
-	std::string defines = "#define TRANSFER_FUNCTION_RENDERING\n";
-	if (aRenderingQuality.enableJittering) {
-		defines += "#define ENABLE_JITTERING\n";
-	}
 
-	if (aTransferFunctionRenderingOptions.enableLight) {
-		defines += "#define ENABLE_SHADING\n";
-	}
 
-	boost::apply_visitor(
-		ConfigureShaderStaticVisitor(defines, aTransferFunctionRenderingOptions.preintegratedTransferFunction),
-		aTransferFunctionRenderingOptions.transferFunction);
-	/*if (aTransferFunctionRenderingOptions.transferFunction.which() == 0) {
-		defines += "#define USE_TRANSFER_FUNCTION_1D\n";
-		if (aTransferFunctionRenderingOptions.preintegratedTransferFunction) {
-			defines += "#define ENABLE_PREINTEGRATED_TRANSFER_FUNCTION\n";
-		}
-	}*/
 
-	if (!mTFShaderPrograms[defines]) {
-		soglu::ShaderProgramSource tfProgramSources = soglu::loadShaderProgramSource(mShaderPath / "transfer_function_volume.cfg", mShaderPath);
-		mTFShaderPrograms[defines] = soglu::createShaderProgramFromSources(tfProgramSources, defines);
-	}
-	return mTFShaderPrograms[defines];
-}
 
-soglu::GLSLProgram &
-VolumeRenderer::getShaderProgram(
-		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions,
-		const RenderingQuality &aRenderingQuality)
-{
-	if (!mIsoSurfaceShaderProgram) {
-		std::string defines;
-		soglu::ShaderProgramSource isoSurfaceProgramSources = soglu::loadShaderProgramSource(mShaderPath / "iso_surface_volume.cfg", mShaderPath);
-		mIsoSurfaceShaderProgram = soglu::createShaderProgramFromSources(isoSurfaceProgramSources, defines);
-	}
-	return mIsoSurfaceShaderProgram;
-}
+
 /*
 template<typename TRenderingOptions>
 void
