@@ -56,6 +56,22 @@ VolumeRenderer::initialize(const boost::filesystem::path &aPath)
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 	mNoInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
 
+	mSecondaryLinearInterpolationSampler.initialize();
+	mSecondaryLinearInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	mSecondaryLinearInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	mSecondaryLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	mSecondaryLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	mSecondaryLinearInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+	mSecondaryLinearInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
+
+	mSecondaryNoInterpolationSampler.initialize();
+	mSecondaryNoInterpolationSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	mSecondaryNoInterpolationSampler.setParameter(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	mSecondaryNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	mSecondaryNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	mSecondaryNoInterpolationSampler.setParameter(GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+	mSecondaryNoInterpolationSampler.setParameter(GL_TEXTURE_BORDER_COLOR, glm::fvec4(0.0f, 0.0f, 0.0f, 0.0f));
+
 
 	mMaskSampler.initialize();
 	mMaskSampler.setParameter(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -211,6 +227,44 @@ void VolumeRenderer::setVolumeRenderingImageData(soglu::GLSLProgram &aShaderProg
 	mMaskSampler.bind(soglu::TextureUnitId(cMaskTextureUnit));
 }
 
+void VolumeRenderer::setVolumeRenderingImageData(soglu::GLSLProgram &aShaderProgram, const MaskedImageWithSecondaryImage &aData, bool aEnableInterpolation)
+{
+	aShaderProgram.setUniformByName("gPrimaryImageData3D", aData.image, soglu::TextureUnitId(cData1TextureUnit));
+	aShaderProgram.setUniformByName("gMappedIntervalBands", aData.image.getMappedInterval());
+
+	aShaderProgram.setUniformByName("gSecondaryImageData3D", aData.secondary, soglu::TextureUnitId(cData2TextureUnit));
+	aShaderProgram.setUniformByName("gSecondaryMappedIntervalBands", aData.secondary.getMappedInterval());
+
+	if (aEnableInterpolation) {
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData2TextureUnit));
+	} else {
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData2TextureUnit));
+	}
+
+	aShaderProgram.setUniformByName("gMaskData3D", aData.mask, soglu::TextureUnitId(cMaskTextureUnit));
+	//aShaderProgram.setUniformByName("gMappedIntervalBands", aData.image.getMappedInterval());
+	mMaskSampler.bind(soglu::TextureUnitId(cMaskTextureUnit));
+}
+
+void VolumeRenderer::setVolumeRenderingImageData(soglu::GLSLProgram &aShaderProgram, const ImageWithSecondaryImage &aData, bool aEnableInterpolation)
+{
+	aShaderProgram.setUniformByName("gPrimaryImageData3D", aData.image, soglu::TextureUnitId(cData1TextureUnit));
+	aShaderProgram.setUniformByName("gMappedIntervalBands", aData.image.getMappedInterval());
+
+	aShaderProgram.setUniformByName("gSecondaryImageData3D", aData.secondary, soglu::TextureUnitId(cData2TextureUnit));
+	aShaderProgram.setUniformByName("gSecondaryMappedIntervalBands", aData.secondary.getMappedInterval());
+
+	if (aEnableInterpolation) {
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+		mLinearInterpolationSampler.bind(soglu::TextureUnitId(cData2TextureUnit));
+	} else {
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData1TextureUnit));
+		mNoInterpolationSampler.bind(soglu::TextureUnitId(cData2TextureUnit));
+	}
+}
+
 
 void
 VolumeRenderer::setRenderingOptions(
@@ -285,8 +339,23 @@ VolumeRenderer::setRenderingOptions(
 		)
 {
 	setupLights(aShaderProgram, aIsoSurfaceRenderingOptions.lightPosition);
-	aShaderProgram.setUniformByName("gIsoValue", aIsoSurfaceRenderingOptions.isoValue);
-	aShaderProgram.setUniformByName("gSurfaceColor", aIsoSurfaceRenderingOptions.isoSurfaceColor);
+
+	std::vector<float> isoValues(aIsoSurfaceRenderingOptions.isoSurfaces.size());
+	std::vector<glm::vec4> surfaceColors(aIsoSurfaceRenderingOptions.isoSurfaces.size());
+	for (int i = 0; i < isoValues.size(); ++i) {
+		isoValues[i] = aIsoSurfaceRenderingOptions.isoSurfaces[i].isoValue;
+		surfaceColors[i] = aIsoSurfaceRenderingOptions.isoSurfaces[i].isoSurfaceColor;
+	}
+
+	aShaderProgram.setUniformByName("gIsoValues", isoValues.data(), isoValues.size());
+	aShaderProgram.setUniformByName("gIsoSurfacesColors", surfaceColors.data(), surfaceColors.size());
+
+	//std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gLight") << std::endl;
+	//std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gIsoSurfaces") << std::endl;
+	//std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gIsoSurfaces[0].surfaceColor") << std::endl;
+	//std::cout << "\n\n\nAttribute2 " << aShaderProgram.getAttributeLocation("gIsoSurfaces[0].isoValue") << std::endl;
+	//aShaderProgram.setUniformByName("gIsoValue", aIsoSurfaceRenderingOptions.isoValue);
+	//aShaderProgram.setUniformByName("gSurfaceColor", aIsoSurfaceRenderingOptions.isoSurfaceColor);
 }
 
 void

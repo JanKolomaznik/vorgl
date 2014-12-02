@@ -14,8 +14,20 @@
 #include <boost/filesystem/path.hpp>
 
 #include <unordered_map>
+#include <vector>
 
 #include <type_traits>
+
+struct MaskedImageWithSecondaryImage {
+	const soglu::GLTextureImageTyped<3> &image;
+	const soglu::GLTextureImageTyped<3> &secondary;
+	const soglu::GLTextureImageTyped<3> &mask;
+};
+
+struct ImageWithSecondaryImage {
+	const soglu::GLTextureImageTyped<3> &image;
+	const soglu::GLTextureImageTyped<3> &secondary;
+};
 
 struct MaskedImage {
 	const soglu::GLTextureImageTyped<3> &image;
@@ -32,6 +44,18 @@ inline std::string
 definesFromInput(const MaskedImage&)
 {
 	return "#define USE_MASK\n";
+}
+
+inline std::string
+definesFromInput(const MaskedImageWithSecondaryImage&)
+{
+	return "#define USE_SECONDARY\n#define USE_MASK\n";
+}
+
+inline std::string
+definesFromInput(const ImageWithSecondaryImage&)
+{
+	return "#define USE_SECONDARY\n";
 }
 
 // TODO - find better place
@@ -134,9 +158,23 @@ struct VolumeRenderingConfiguration {
 	soglu::TextureId depthBuffer;
 };
 
-struct IsoSurfaceRenderingOptions : LightConfiguration {
+struct IsoSurfaceDefinition {
 	float isoValue;
 	glm::fvec4 isoSurfaceColor;
+};
+typedef std::vector<IsoSurfaceDefinition> IsoSurfaceDefinitionList;
+
+inline IsoSurfaceDefinitionList
+defaultIsoSurfaces()
+{
+	IsoSurfaceDefinitionList isoSurfaces(1);
+	isoSurfaces[0].isoValue = 1000;
+	isoSurfaces[0].isoSurfaceColor = glm::fvec4(0.4f, 0.4f, 1.0f, 0.5f);
+	return isoSurfaces;
+}
+
+struct IsoSurfaceRenderingOptions : LightConfiguration {
+	IsoSurfaceDefinitionList isoSurfaces;
 };
 
 struct RenderingQuality {
@@ -198,7 +236,8 @@ public:
 		cJitteringTextureUnit = 10,
 		cTransferFunctionTextureUnit = 11,
 		cData1TextureUnit = 12,
-		cMaskTextureUnit = 13,
+		cData2TextureUnit = 13,
+		cMaskTextureUnit = 14,
 	};
 
 	typedef Flags<TFFlags> TransferFunctionRenderFlags;
@@ -351,6 +390,8 @@ protected:
 			const RenderingQuality &aRenderingQuality)
 	{
 		std::string defines = definesFromInput(aData);
+		std:: cout << aIsosurfaceRenderingOptions.isoSurfaces.size() << "\n\n";
+		defines += std::string("#define ISO_SURFACES_COUNT ") + std::to_string(aIsosurfaceRenderingOptions.isoSurfaces.size()) + "\n";
 		if (!mIsoSurfaceShaderPrograms[defines]) {
 			soglu::ShaderProgramSource isoSurfaceProgramSources = soglu::loadShaderProgramSource(mShaderPath / "iso_surface_volume.cfg", mShaderPath);
 			mIsoSurfaceShaderPrograms[defines] = soglu::createShaderProgramFromSources(isoSurfaceProgramSources, defines);
@@ -375,6 +416,20 @@ protected:
 	setVolumeRenderingImageData(
 		soglu::GLSLProgram &aShaderProgram,
 		const MaskedImage &aData,
+		bool aEnableInterpolation
+		);
+
+	void
+	setVolumeRenderingImageData(
+		soglu::GLSLProgram &aShaderProgram,
+		const MaskedImageWithSecondaryImage &aData,
+		bool aEnableInterpolation
+		);
+
+	void
+	setVolumeRenderingImageData(
+		soglu::GLSLProgram &aShaderProgram,
+		const ImageWithSecondaryImage &aData,
 		bool aEnableInterpolation
 		);
 
@@ -453,6 +508,8 @@ protected:
 	soglu::Sampler mLinearInterpolationSampler;
 	soglu::Sampler mNoInterpolationSampler;
 	soglu::Sampler mMaskSampler;
+	soglu::Sampler mSecondaryLinearInterpolationSampler;
+	soglu::Sampler mSecondaryNoInterpolationSampler;
 	float mJitterStrength;
 
 	boost::filesystem::path mShaderPath;
