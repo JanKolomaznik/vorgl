@@ -61,6 +61,21 @@ void SliceRenderer::maskRendering(
 		aOptions);
 }
 
+void SliceRenderer::colorMapRendering(
+		const soglu::GLViewSetup &aViewSetup,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const SliceConfiguration &aSlice,
+		const SliceRenderingQuality &aRenderingQuality,
+		const ColorMapRenderingOptions &aOptions)
+{
+	renderSlice(
+		aViewSetup,
+		aImage,
+		aSlice,
+		aRenderingQuality,
+		aOptions);
+}
+
 void
 SliceRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
@@ -294,6 +309,20 @@ SliceRenderer::getShaderProgram(
 	return mMaskShaderPrograms[defines];
 }
 
+soglu::GLSLProgram &
+SliceRenderer::getShaderProgram(
+		const ColorMapRenderingOptions &aOptions,
+		const SliceRenderingQuality &aRenderingQuality)
+{
+	std::string defines;// = "#define BRIGHTNESS_CONTRAST_RENDERING\n";
+
+	if (!mColorMapShaderPrograms[defines]) {
+		soglu::ShaderProgramSource programSources = soglu::loadShaderProgramSource(mShaderPath / "colormap_slice.cfg", mShaderPath);
+		mColorMapShaderPrograms[defines] = soglu::createShaderProgramFromSources(programSources, defines);
+	}
+	return mColorMapShaderPrograms[defines];
+}
+
 void
 SliceRenderer::setRenderingOptions(
 		soglu::GLSLProgram &aShaderProgram,
@@ -303,9 +332,18 @@ SliceRenderer::setRenderingOptions(
 	aShaderProgram.setUniformByName("gWLWindow", aBCOptions.lutWindow);
 }
 
-void SliceRenderer::setRenderingOptions(soglu::GLSLProgram &aShaderProgram, const MaskRenderingOptions &aOptions)
+void SliceRenderer::setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const MaskRenderingOptions &aOptions)
 {
 	aShaderProgram.setUniformByName("gMaskColor", aOptions.maskColor);
+}
+
+void SliceRenderer::setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const ColorMapRenderingOptions &aOptions)
+{
+	//aShaderProgram.setUniformByName("gMaskColor", aOptions.maskColor);
 }
 
 
