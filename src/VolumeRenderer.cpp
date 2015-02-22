@@ -93,6 +93,7 @@ VolumeRenderer::loadShaders(const boost::filesystem::path &aPath)
 	mTFShaderPrograms.clear();
 	mDensityShaderPrograms.clear();
 	mIsoSurfaceShaderPrograms.clear();
+  mEigenvaluesShaderPrograms.clear();
 }
 
 void
@@ -338,24 +339,33 @@ VolumeRenderer::setRenderingOptions(
 		const IsoSurfaceRenderingOptions &aIsoSurfaceRenderingOptions
 		)
 {
-	setupLights(aShaderProgram, aIsoSurfaceRenderingOptions.lightPosition);
+  setupLights(aShaderProgram, aIsoSurfaceRenderingOptions.lightPosition);
 
-	std::vector<float> isoValues(aIsoSurfaceRenderingOptions.isoSurfaces.size());
-	std::vector<glm::vec4> surfaceColors(aIsoSurfaceRenderingOptions.isoSurfaces.size());
-	for (int i = 0; i < isoValues.size(); ++i) {
-		isoValues[i] = aIsoSurfaceRenderingOptions.isoSurfaces[i].isoValue;
-		surfaceColors[i] = aIsoSurfaceRenderingOptions.isoSurfaces[i].isoSurfaceColor;
-	}
+  std::vector<float> isoValues(aIsoSurfaceRenderingOptions.isoSurfaces.size());
+  std::vector<glm::vec4> surfaceColors(aIsoSurfaceRenderingOptions.isoSurfaces.size());
+  for (int i = 0; i < isoValues.size(); ++i) {
+    isoValues[i] = aIsoSurfaceRenderingOptions.isoSurfaces[i].isoValue;
+    surfaceColors[i] = aIsoSurfaceRenderingOptions.isoSurfaces[i].isoSurfaceColor;
+  }
 
-	aShaderProgram.setUniformByName("gIsoValues", isoValues.data(), isoValues.size());
-	aShaderProgram.setUniformByName("gIsoSurfacesColors", surfaceColors.data(), surfaceColors.size());
+  aShaderProgram.setUniformByName("gIsoValues", isoValues.data(), isoValues.size());
+  aShaderProgram.setUniformByName("gIsoSurfacesColors", surfaceColors.data(), surfaceColors.size());
 
-	//std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gLight") << std::endl;
-	//std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gIsoSurfaces") << std::endl;
-	//std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gIsoSurfaces[0].surfaceColor") << std::endl;
-	//std::cout << "\n\n\nAttribute2 " << aShaderProgram.getAttributeLocation("gIsoSurfaces[0].isoValue") << std::endl;
-	//aShaderProgram.setUniformByName("gIsoValue", aIsoSurfaceRenderingOptions.isoValue);
-	//aShaderProgram.setUniformByName("gSurfaceColor", aIsoSurfaceRenderingOptions.isoSurfaceColor);
+  //std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gLight") << std::endl;
+  //std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gIsoSurfaces") << std::endl;
+  //std::cout << "\n\n\nAttribute " << aShaderProgram.getAttributeLocation("gIsoSurfaces[0].surfaceColor") << std::endl;
+  //std::cout << "\n\n\nAttribute2 " << aShaderProgram.getAttributeLocation("gIsoSurfaces[0].isoValue") << std::endl;
+  //aShaderProgram.setUniformByName("gIsoValue", aIsoSurfaceRenderingOptions.isoValue);
+  //aShaderProgram.setUniformByName("gSurfaceColor", aIsoSurfaceRenderingOptions.isoSurfaceColor);
+}
+
+void
+VolumeRenderer::setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+    const EigenvaluesRenderingOptions &aEigenvaluesRenderingOptions
+		)
+{
+  aShaderProgram.setUniformByName("gWLWindow", aEigenvaluesRenderingOptions.lutWindow);
 }
 
 void

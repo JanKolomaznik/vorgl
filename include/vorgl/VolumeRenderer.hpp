@@ -177,6 +177,19 @@ struct IsoSurfaceRenderingOptions : LightConfiguration {
 	IsoSurfaceDefinitionList isoSurfaces;
 };
 
+struct EigenvaluesRenderingOptions : DensityRenderingOptions {
+  EigenvaluesRenderingOptions(const DensityRenderingOptions& other)
+  {
+    this->lutWindow = other.lutWindow;
+    this->enableMIP = other.enableMIP;
+  }
+
+  EigenvaluesRenderingOptions()
+  {
+
+  }
+};
+
 struct RenderingQuality {
 	int sliceCount;
 	bool enableInterpolation;
@@ -289,6 +302,19 @@ public:
 		renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aIsoSurfaceRenderingOptions);
 	}
 
+	template<typename TInputData>
+	void
+	eigenvaluesRendering(
+			const VolumeRenderingConfiguration &aViewConfiguration,
+			const TInputData &aImage,
+			const RenderingQuality &aRenderingQuality,
+			const ClipPlanes &aCutPlanes,
+      const EigenvaluesRenderingOptions &aEigenvaluesRenderingOptions
+			)
+	{
+    renderVolume(aViewConfiguration, aImage, aRenderingQuality, aCutPlanes, aEigenvaluesRenderingOptions);
+	}
+
 protected:
 	void
 	setupJittering(soglu::GLSLProgram &aShaderProgram, float aJitterStrength);
@@ -399,6 +425,23 @@ protected:
 		return mIsoSurfaceShaderPrograms[defines];
 	}
 
+	template<typename TInputData>
+	soglu::GLSLProgram &
+	getShaderProgram(
+			const TInputData &aData,
+      const EigenvaluesRenderingOptions &aEigenvaluesRenderingOptions,
+			const RenderingQuality &aRenderingQuality)
+	{
+		std::string defines = definesFromInput(aData);
+    // place here additional defines
+
+		if (!mEigenvaluesShaderPrograms[defines]) {
+			soglu::ShaderProgramSource eigenvaluesProgramSources = soglu::loadShaderProgramSource(mShaderPath / "eigenvalues_volume.cfg", mShaderPath);
+      mEigenvaluesShaderPrograms[defines] = soglu::createShaderProgramFromSources(eigenvaluesProgramSources, defines);
+		}
+    return mEigenvaluesShaderPrograms[defines];
+	}
+
 	void
 	renderAuxiliaryGeometryForRaycasting(
 		const VolumeRenderingConfiguration &aViewConfiguration,
@@ -463,6 +506,12 @@ protected:
 		const IsoSurfaceRenderingOptions &aIsosurfaceRenderingOptions
 		);
 
+	void
+	setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const EigenvaluesRenderingOptions &aIsosurfaceRenderingOptions
+		);
+
 	template<typename TInputData, typename TRenderingOptions>
 	void
 	renderVolume(
@@ -499,6 +548,7 @@ protected:
 	std::unordered_map<std::string, soglu::GLSLProgram> mTFShaderPrograms;
 	std::unordered_map<std::string, soglu::GLSLProgram> mDensityShaderPrograms;
 	std::unordered_map<std::string, soglu::GLSLProgram> mIsoSurfaceShaderPrograms;
+	std::unordered_map<std::string, soglu::GLSLProgram> mEigenvaluesShaderPrograms;
 	//soglu::GLSLProgram mIsoSurfaceShaderProgram;
 
 
