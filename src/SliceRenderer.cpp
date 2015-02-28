@@ -76,11 +76,28 @@ void SliceRenderer::colorMapRendering(
 		aOptions);
 }
 
+void SliceRenderer::eigenvaluesSliceRendering(
+		const soglu::GLViewSetup &aViewSetup,
+		const soglu::GLTextureImageTyped<3> &aImage,
+		const SliceConfiguration &aSlice,
+		const SliceRenderingQuality &aRenderingQuality,
+		const EigenvaluesSliceRenderingOptions &aOptions)
+{
+	renderSlice(
+		aViewSetup,
+		aImage,
+		aSlice,
+		aRenderingQuality,
+		aOptions);
+}
+
 void
 SliceRenderer::loadShaders(const boost::filesystem::path &aPath)
 {
 	mBrightnessContrastShaderPrograms.clear();
-	mMaskShaderPrograms.clear();
+  mMaskShaderPrograms.clear();
+  mColorMapShaderPrograms.clear();
+  mEigenvaluesSliceShaderPrograms.clear();
 	//SOGLU_DEBUG_PRINT("Loading slice renderer shader programs.");
 	//mShaderProgram = soglu::createGLSLProgramFromVertexAndFragmentShader(aPath / "slice.vert.glsl", aPath / "slice.frag.glsl");
 	//SOGLU_DEBUG_PRINT("Slice renderer shader programs loaded.");
@@ -323,6 +340,20 @@ SliceRenderer::getShaderProgram(
 	return mColorMapShaderPrograms[defines];
 }
 
+soglu::GLSLProgram &
+SliceRenderer::getShaderProgram(
+const EigenvaluesSliceRenderingOptions &aOptions,
+		const SliceRenderingQuality &aRenderingQuality)
+{
+	std::string defines = "#define BRIGHTNESS_CONTRAST_RENDERING\n";
+
+  if (!mEigenvaluesSliceShaderPrograms[defines]) {
+		soglu::ShaderProgramSource programSources = soglu::loadShaderProgramSource(mShaderPath / "eigenvalues_slice.cfg", mShaderPath);
+    mEigenvaluesSliceShaderPrograms[defines] = soglu::createShaderProgramFromSources(programSources, defines);
+	}
+  return mEigenvaluesSliceShaderPrograms[defines];
+}
+
 void
 SliceRenderer::setRenderingOptions(
 		soglu::GLSLProgram &aShaderProgram,
@@ -344,6 +375,13 @@ void SliceRenderer::setRenderingOptions(
 		const ColorMapRenderingOptions &aOptions)
 {
 	//aShaderProgram.setUniformByName("gMaskColor", aOptions.maskColor);
+}
+
+void SliceRenderer::setRenderingOptions(
+		soglu::GLSLProgram &aShaderProgram,
+		const EigenvaluesSliceRenderingOptions &aOptions)
+{
+  aShaderProgram.setUniformByName("gWLWindow", aOptions.lutWindow);
 }
 
 

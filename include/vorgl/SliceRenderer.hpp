@@ -30,6 +30,10 @@ struct ColorMapRenderingOptions {
 	float alpha;
 };
 
+struct EigenvaluesSliceRenderingOptions {
+	glm::fvec2 lutWindow;
+};
+
 
 struct SliceConfiguration {
 	float slice;
@@ -75,6 +79,14 @@ public:
 		const SliceRenderingQuality &aRenderingQuality,
 		const ColorMapRenderingOptions &aOptions
 		);
+
+  void eigenvaluesSliceRendering(
+    const soglu::GLViewSetup &aViewSetup,
+    const soglu::GLTextureImageTyped<3> &aImage,
+    const SliceConfiguration &aSlice,
+    const SliceRenderingQuality &aRenderingQuality,
+    const EigenvaluesSliceRenderingOptions &aOptions
+    );
 
 	/*void
 	lutWindowRendering(
@@ -141,6 +153,12 @@ protected:
 			const ColorMapRenderingOptions &aOptions
 			);
 
+	void
+	setRenderingOptions(
+			soglu::GLSLProgram &aShaderProgram,
+			const EigenvaluesSliceRenderingOptions &aOptions
+			);
+
 	soglu::GLSLProgram &
 	getShaderProgram(
 			const BrightnessContrastRenderingOptions &aBCOptions,
@@ -155,7 +173,12 @@ protected:
 	soglu::GLSLProgram &
 	getShaderProgram(
 			const ColorMapRenderingOptions &aOptions,
-			const SliceRenderingQuality &aRenderingQuality);
+      const SliceRenderingQuality &aRenderingQuality);
+  
+  soglu::GLSLProgram &
+    getShaderProgram(
+    const EigenvaluesSliceRenderingOptions &aOptions,
+    const SliceRenderingQuality &aRenderingQuality);
 
 	template<typename TRenderingOptions>
 	void
@@ -170,6 +193,7 @@ protected:
 	std::unordered_map<std::string, soglu::GLSLProgram> mBrightnessContrastShaderPrograms;
 	std::unordered_map<std::string, soglu::GLSLProgram> mMaskShaderPrograms;
 	std::unordered_map<std::string, soglu::GLSLProgram> mColorMapShaderPrograms;
+	std::unordered_map<std::string, soglu::GLSLProgram> mEigenvaluesSliceShaderPrograms;
 
 	//soglu::GLSLProgram mShaderProgram;
 	soglu::Sampler mLinearInterpolationSampler;
