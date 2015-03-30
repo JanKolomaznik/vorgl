@@ -275,9 +275,9 @@ private:
     this->eigenvaluePrimaryParameters.g = primaryProcessingParameters[1];
     this->eigenvaluePrimaryParameters.b = primaryProcessingParameters[2];
 
-    this->eigenvalueSecondaryParameters.r = primaryProcessingParameters[0];
-    this->eigenvalueSecondaryParameters.g = primaryProcessingParameters[1];
-    this->eigenvalueSecondaryParameters.b = primaryProcessingParameters[2];
+    this->eigenvalueSecondaryParameters.r = secondaryProcessingParameters[0];
+    this->eigenvalueSecondaryParameters.g = secondaryProcessingParameters[1];
+    this->eigenvalueSecondaryParameters.b = secondaryProcessingParameters[2];
   }
 
 	//soglu::TextureId mGLTextureID;
