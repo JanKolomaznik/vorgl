@@ -81,7 +81,19 @@ createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFuncti
 }
 
 GLTransferFunctionBuffer2D::Ptr
-createGLTransferFunctionBuffer2D(const RGBAf *aData, int aWidth, int aHeight, glm::fvec2 aFrom, glm::fvec2 aTo)
+createGLTransferFunctionBuffer2D(
+const RGBAf *aData,
+int aWidth,
+int aHeight,
+glm::fvec2 aFrom,
+glm::fvec2 aTo,
+bool eigenvalueProcessPrimary,
+bool eigenvalueProcessSecondary,
+std::array<float, 3> primaryProcessingParameters,
+int primaryValuesMultiplier,
+std::array<float, 3> secondaryProcessingParameters,
+int secondaryValuesMultiplier
+)
 {
 	GL_CHECKED_CALL( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
 	GL_CHECKED_CALL( glPixelStorei(GL_PACK_ALIGNMENT, 1) );
@@ -111,7 +123,15 @@ createGLTransferFunctionBuffer2D(const RGBAf *aData, int aWidth, int aHeight, gl
 			new GLTransferFunctionBuffer2D(
 				std::move(texture),
 				GLTransferFunctionBuffer2D::MappedInterval(aFrom, aTo),
-				GLTransferFunctionBuffer2D::Resolution(aWidth, aHeight)));
+				GLTransferFunctionBuffer2D::Resolution(aWidth, aHeight),
+        eigenvalueProcessPrimary,
+        eigenvalueProcessSecondary,
+        primaryProcessingParameters,
+        primaryValuesMultiplier,
+        secondaryProcessingParameters,
+        secondaryValuesMultiplier
+      )
+  );
 }
 
 } /*vorgl*/

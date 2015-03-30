@@ -185,7 +185,8 @@ struct GLTransferFunctionBuffer2D
 	typedef std::shared_ptr< GLTransferFunctionBuffer2D > Ptr;
 	typedef std::shared_ptr< const GLTransferFunctionBuffer2D > ConstPtr;
 	typedef std::weak_ptr< GLTransferFunctionBuffer2D > WPtr;
-	typedef std::weak_ptr< const GLTransferFunctionBuffer2D > ConstWPtr;
+  typedef std::weak_ptr< const GLTransferFunctionBuffer2D > ConstWPtr;
+  typedef std::array<float, 3> EigenvalueProcessingParameters;
 
 	~GLTransferFunctionBuffer2D()
 	{
@@ -194,7 +195,20 @@ struct GLTransferFunctionBuffer2D
 		//OpenGLManager::getInstance()->deleteTextures( mGLTextureID );
 	}
 
-	friend GLTransferFunctionBuffer2D::Ptr createGLTransferFunctionBuffer2D(const RGBAf *aData, int aWidth, int aHeight, glm::fvec2 aFrom, glm::fvec2 aTo);
+  friend GLTransferFunctionBuffer2D::Ptr
+    createGLTransferFunctionBuffer2D(
+    const RGBAf *aData,
+    int aWidth,
+    int aHeight,
+    glm::fvec2 aFrom,
+    glm::fvec2 aTo,
+    bool eigenvalueProcessPrimary,
+    bool eigenvalueProcessSecondary,
+    std::array<float, 3> primaryProcessingParameters,
+    int primaryValuesMultiplier,
+    std::array<float, 3> secondaryProcessingParameters,
+    int secondaryValuesMultiplier
+    );
 
 	MappedInterval
 	getMappedInterval()const
@@ -209,17 +223,75 @@ struct GLTransferFunctionBuffer2D
 	{
 		return mResolution;
 	}
+
+  bool
+  getEigenvalueProcessPrimary() const 
+  {
+    return this->eigenvalueProcessPrimary;
+  }
+
+  bool
+  getEigenvalueProcessSecondary() const
+  {
+    return this->eigenvalueProcessSecondary;
+  }
+
+  glm::fvec3
+  getPrimaryParameters() const
+  {
+    return this->eigenvaluePrimaryParameters;
+  }
+
+  glm::int32
+  getPrimaryValuesMultiplier() const
+  {
+    return this->primaryValuesMultiplier;
+  }
+
+  glm::fvec3
+  getSecondaryParameters() const
+  {
+    return this->eigenvalueSecondaryParameters;
+  }
+
+  glm::int32
+  getSecondaryValuesMultiplier() const
+  {
+    return this->secondaryValuesMultiplier;
+  }
+
 private:
-	GLTransferFunctionBuffer2D(soglu::TextureObject &&aTexture, MappedInterval aMappedInterval, Resolution aResolution)
+  GLTransferFunctionBuffer2D(soglu::TextureObject &&aTexture, MappedInterval aMappedInterval, Resolution aResolution, bool eigenvalueProcessPrimary, bool eigenvalueProcessSecondary,
+    EigenvalueProcessingParameters primaryProcessingParameters, int primaryValuesMultiplier, EigenvalueProcessingParameters secondaryProcessingParameters, int secondaryValuesMultiplier)
 		: mTexture(std::move(aTexture))
 		, mMappedInterval( aMappedInterval )
 		, mResolution( aResolution )
-	{ /* empty */ }
+    , eigenvalueProcessPrimary(eigenvalueProcessPrimary)
+    , eigenvalueProcessSecondary(eigenvalueProcessSecondary)
+    , primaryValuesMultiplier(primaryValuesMultiplier)
+    , secondaryValuesMultiplier(secondaryValuesMultiplier)
+	{
+    this->eigenvaluePrimaryParameters.r = primaryProcessingParameters[0];
+    this->eigenvaluePrimaryParameters.g = primaryProcessingParameters[1];
+    this->eigenvaluePrimaryParameters.b = primaryProcessingParameters[2];
+
+    this->eigenvalueSecondaryParameters.r = primaryProcessingParameters[0];
+    this->eigenvalueSecondaryParameters.g = primaryProcessingParameters[1];
+    this->eigenvalueSecondaryParameters.b = primaryProcessingParameters[2];
+  }
 
 	//soglu::TextureId mGLTextureID;
 	soglu::TextureObject mTexture;
 	MappedInterval mMappedInterval;
 	Resolution mResolution;
+
+  glm::fvec3 eigenvaluePrimaryParameters;
+  glm::int32 primaryValuesMultiplier;
+  glm::fvec3 eigenvalueSecondaryParameters;
+  glm::int32 secondaryValuesMultiplier;
+
+  bool eigenvalueProcessPrimary = false;
+  bool eigenvalueProcessSecondary = false;
 };
 
 
@@ -227,7 +299,19 @@ GLTransferFunctionBuffer1D::Ptr
 createGLTransferFunctionBuffer1D(const TransferFunctionBuffer1D &aTransferFunction);
 
 GLTransferFunctionBuffer2D::Ptr
-createGLTransferFunctionBuffer2D(const RGBAf *aData, int aWidth, int aHeight, glm::fvec2 aFrom, glm::fvec2 aTo);
+createGLTransferFunctionBuffer2D(
+  const RGBAf *aData,
+  int aWidth,
+  int aHeight,
+  glm::fvec2 aFrom,
+  glm::fvec2 aTo,
+  bool eigenvalueProcessPrimary,
+  bool eigenvalueProcessSecondary,
+  glm::fvec3 primaryProcessingParameters,
+  glm::int32 primaryValuesMultiplier,
+  glm::fvec3 secondaryProcessingParameters,
+  glm::int32 secondaryValuesMultiplier
+);
 
 struct TransferFunctionBuffer1DInfo {
 	vorgl::GLTransferFunctionBuffer1D::Ptr tfGLBuffer;
@@ -270,7 +354,12 @@ setUniform(soglu::GLSLProgram &aProgram, const std::string &aUniformName, const 
 	aProgram.setUniformByName(aUniformName + ".from", aTransferFunction.getMappedInterval().first);
 	aProgram.setUniformByName(aUniformName + ".to", aTransferFunction.getMappedInterval().second);
 	aProgram.setUniformByName(aUniformName + ".xSamples", aTransferFunction.getResolution().first);
-	aProgram.setUniformByName(aUniformName + ".ySamples", aTransferFunction.getResolution().second);
+	aProgram.setUniformByName(aUniformName + ".eigenvalueProcessPrimary", aTransferFunction.getEigenvalueProcessPrimary());
+  aProgram.setUniformByName(aUniformName + ".eigenvalueProcessSecondary", aTransferFunction.getEigenvalueProcessSecondary());
+  aProgram.setUniformByName(aUniformName + ".primaryEigenvalueParameters", aTransferFunction.getPrimaryParameters());
+  aProgram.setUniformByName(aUniformName + ".primaryValuesMultiplier", aTransferFunction.getPrimaryValuesMultiplier());
+  aProgram.setUniformByName(aUniformName + ".secondaryEigenvalueParameters", aTransferFunction.getSecondaryParameters());
+  aProgram.setUniformByName(aUniformName + ".secondaryValuesMultiplier", aTransferFunction.getSecondaryValuesMultiplier());
 }
 
 } /*vorgl*/
