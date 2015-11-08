@@ -6,7 +6,7 @@
 #include <boost/scope_exit.hpp>
 
 #include <glm/gtx/component_wise.hpp>
-#include <glm/gtx/verbose_operator.hpp>
+//#include <glm/gtx/verbose_operator.hpp>
 
 #include <vorgl/SliceGeneration.hpp>
 
@@ -463,4 +463,3 @@ VolumeRenderer::isosurfaceRendering(
 
 
 }//vorgl
-
