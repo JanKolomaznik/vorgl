@@ -300,7 +300,7 @@ SliceRenderer::getShaderProgram(
 		const MaskRenderingOptions &aOptions,
 		const SliceRenderingQuality &aRenderingQuality)
 {
-	std::string defines;// = "#define BRIGHTNESS_CONTRAST_RENDERING\n";
+	std::string defines = "#define MASK_RENDERING\n";
 
 	if (!mMaskShaderPrograms[defines]) {
 		soglu::ShaderProgramSource maskProgramSources = soglu::loadShaderProgramSource(mShaderPath / "mask_slice.cfg", mShaderPath);
